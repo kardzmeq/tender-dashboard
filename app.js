@@ -575,10 +575,7 @@ function renderCardsArea() {
   pool.innerHTML = filtered.map((row) => renderCard(row)).join("\n");
 }
 
-function refreshUI(resetSubmission = true) {
-  if (resetSubmission) {
-    state.hasSubmitted = false;
-  }
+function refreshUI() {
   updateCounts();
   updateFilterCountBadges();
   renderCardsArea();
@@ -681,7 +678,7 @@ function bindUi() {
 
   document.getElementById("submitSelection").addEventListener("click", () => {
     state.hasSubmitted = true;
-    refreshUI(false);
+    refreshUI();
   });
 }
 
