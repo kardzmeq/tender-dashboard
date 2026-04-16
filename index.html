@@ -1,0 +1,65 @@
+﻿<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent_2 Newsletter Export</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <h1>Agent_2 Newsletter Export</h1>
+  <div id="loadStatus" class="period-banner">Lade Datei...</div>
+  <p id="metaInfo" class="meta"></p>
+  <div id="loadWarnings" class="warnings" aria-live="polite"></div>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <input id="liveSearch" type="text" placeholder="Search title, location, leistungen...">
+    </div>
+    <div class="filter-row">
+      <strong>Type</strong>
+      <div class="button-wrap" id="typeFilters">
+        <button class="filter-btn active" data-filter-group="type" data-value="all">Both</button>
+        <button class="filter-btn" data-filter-group="type" data-value="new_competition">New Competition</button>
+        <button class="filter-btn" data-filter-group="type" data-value="results">Results</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <strong>Location</strong>
+      <div class="button-wrap" id="locationFilters">
+        <button class="filter-btn active" data-filter-group="location" data-value="all">All</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <strong>Category</strong>
+      <div class="button-wrap" id="categoryFilters">
+        <button class="filter-btn active" data-filter-group="category" data-value="all">All</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <strong>Score</strong>
+      <div class="button-wrap" id="scoreFilters">
+        <button class="filter-btn active" data-filter-group="score" data-value="all">All</button>
+      </div>
+    </div>
+    <div class="button-wrap">
+      <button id="expandAll" class="action-btn">Expand All</button>
+      <button id="collapseAll" class="action-btn">Collapse All</button>
+      <button id="clearFilters" class="action-btn">Clear Filters</button>
+      <button id="clearSelection" class="action-btn">Clear Selection</button>
+      <button id="submitSelection" class="action-btn submit-btn">Submit Selection</button>
+    </div>
+  </div>
+
+  <div id="resultsCount" class="results-count"></div>
+
+  <h2>Selectable Cards</h2>
+  <div id="cardsPool"></div>
+
+  <h2>Submitted Cards</h2>
+  <div id="submittedInfo" class="results-count">No submission yet.</div>
+  <div id="submittedCards"></div>
+</body>
+</html>
