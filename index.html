@@ -1,82 +1,65 @@
 ﻿<!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TED Overview Hub</title>
+  <title>Agent_2 Newsletter Export</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <main class="page">
-    <header class="hero">
-      <h1>TED Overview Hub</h1>
-      <p>Select rows from <code>Agent_2</code> + <code>Agent_2_Results</code>, then click <strong>Submit</strong> to render newsletter cards.</p>
-      <div id="loadStatus" class="status">Loading workbook...</div>
-      <div id="loadWarnings" class="warnings" aria-live="polite"></div>
-    </header>
+  <h1>Agent_2 Newsletter Export</h1>
+  <div id="loadStatus" class="period-banner">Lade Datei...</div>
+  <p id="metaInfo" class="meta"></p>
+  <div id="loadWarnings" class="warnings" aria-live="polite"></div>
 
-    <section class="controls" aria-label="Filters">
-      <div class="control-row">
-        <label for="searchInput">Search</label>
-        <input id="searchInput" type="text" placeholder="Title, location, category, leistungen...">
+  <div class="toolbar">
+    <div class="search-row">
+      <input id="liveSearch" type="text" placeholder="Search title, location, leistungen...">
+    </div>
+    <div class="filter-row">
+      <strong>Type</strong>
+      <div class="button-wrap" id="typeFilters">
+        <button class="filter-btn active" data-filter-group="type" data-value="all">Both</button>
+        <button class="filter-btn" data-filter-group="type" data-value="new_competition">New Competition</button>
+        <button class="filter-btn" data-filter-group="type" data-value="results">Results</button>
       </div>
-      <div class="control-grid">
-        <div>
-          <label for="typeFilter">Type</label>
-          <select id="typeFilter">
-            <option value="all">Both</option>
-            <option value="new_competition">New Competition</option>
-            <option value="results">Results</option>
-          </select>
-        </div>
-        <div>
-          <label for="locationFilter">Location</label>
-          <select id="locationFilter"></select>
-        </div>
-        <div>
-          <label for="categoryFilter">Category</label>
-          <select id="categoryFilter"></select>
-        </div>
-        <div>
-          <label for="scoreFilter">Score</label>
-          <select id="scoreFilter"></select>
-        </div>
+    </div>
+    <div class="filter-row">
+      <strong>Location</strong>
+      <div class="button-wrap" id="locationFilters">
+        <button class="filter-btn active" data-filter-group="location" data-value="all">All</button>
       </div>
-      <div class="action-row">
-        <button id="clearFiltersBtn" class="btn ghost">Clear Filters</button>
-        <button id="clearSelectionBtn" class="btn ghost">Clear Selection</button>
-        <button id="submitBtn" class="btn primary">Submit</button>
+    </div>
+    <div class="filter-row">
+      <strong>Category</strong>
+      <div class="button-wrap" id="categoryFilters">
+        <button class="filter-btn active" data-filter-group="category" data-value="all">All</button>
       </div>
-      <div id="tableMeta" class="meta"></div>
-    </section>
+    </div>
+    <div class="filter-row">
+      <strong>Score</strong>
+      <div class="button-wrap" id="scoreFilters">
+        <button class="filter-btn active" data-filter-group="score" data-value="all">All</button>
+      </div>
+    </div>
+    <div class="button-wrap">
+      <button id="expandAll" class="action-btn">Expand All</button>
+      <button id="collapseAll" class="action-btn">Collapse All</button>
+      <button id="clearFilters" class="action-btn">Clear Filters</button>
+      <button id="clearSelection" class="action-btn">Clear Selection</button>
+      <button id="submitSelection" class="action-btn submit-btn">Submit Selection</button>
+    </div>
+  </div>
 
-    <section class="table-panel" aria-label="Selectable rows">
-      <table id="overviewTable">
-        <thead>
-          <tr>
-            <th>Select</th>
-            <th>Type</th>
-            <th>Score</th>
-            <th>Date</th>
-            <th>Title</th>
-            <th>Location</th>
-            <th>Category</th>
-            <th>ID</th>
-          </tr>
-        </thead>
-        <tbody id="overviewBody">
-          <tr><td colspan="8" class="empty">Loading rows...</td></tr>
-        </tbody>
-      </table>
-    </section>
+  <div id="resultsCount" class="results-count"></div>
 
-    <section aria-label="Submitted cards" class="results-panel">
-      <h2>Submitted Results</h2>
-      <div id="submitInfo" class="meta">No submission yet.</div>
-      <div id="cardsContainer"></div>
-    </section>
-  </main>
+  <h2>Selectable Cards</h2>
+  <div id="cardsPool"></div>
+
+  <h2>Submitted Cards</h2>
+  <div id="submittedInfo" class="results-count">No submission yet.</div>
+  <div id="submittedCards"></div>
 </body>
 </html>
