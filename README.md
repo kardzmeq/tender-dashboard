@@ -1,6 +1,6 @@
-﻿# TED Overview Hub (GitHub Pages)
+﻿Author: kard
 
-NIKI TESTVA MOSHNO
+# TED Overview Hub (GitHub Pages)
 
 This folder is a static web app for GitHub Pages.
 
