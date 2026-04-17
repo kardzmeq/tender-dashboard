@@ -66,6 +66,16 @@ h1 {
   min-width: 170px;
 }
 
+.date-quick-field {
+  min-width: 320px;
+}
+
+.date-range-btn.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
 .date-row label {
   font-weight: 700;
   color: #334155;
@@ -273,6 +283,10 @@ h1 {
     justify-content: stretch;
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .date-quick-field {
+    min-width: 0;
   }
 
   .filter-row {

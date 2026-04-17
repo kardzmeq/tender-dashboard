@@ -165,6 +165,34 @@ function formatDateInput(dateObj) {
   return `${y}-${m}-${d}`;
 }
 
+function clearDateRangeQuickSelection() {
+  document.querySelectorAll(".date-range-btn").forEach((btn) => btn.classList.remove("active"));
+}
+
+function applyQuickDateRange(days) {
+  if (!Number.isFinite(days) || days < 1) {
+    return;
+  }
+
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - (days - 1));
+
+  const endDate = new Date();
+  endDate.setHours(0, 0, 0, 0);
+
+  const startValue = formatDateInput(startDate);
+  const endValue = formatDateInput(endDate);
+
+  const startEl = document.getElementById("startDate");
+  const endEl = document.getElementById("endDate");
+  startEl.value = startValue;
+  endEl.value = endValue;
+
+  state.filters.startDate = startValue;
+  state.filters.endDate = endValue;
+}
+
 function parseDisplayDate(value) {
   const d = parseRowDate(value);
   if (!d) {
@@ -603,13 +631,25 @@ function bindUi() {
   });
 
   document.getElementById("startDate").addEventListener("change", (e) => {
+    clearDateRangeQuickSelection();
     state.filters.startDate = normalize(e.target.value);
     refreshUI();
   });
 
   document.getElementById("endDate").addEventListener("change", (e) => {
+    clearDateRangeQuickSelection();
     state.filters.endDate = normalize(e.target.value);
     refreshUI();
+  });
+
+  document.querySelectorAll(".date-range-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const days = Number.parseInt(btn.getAttribute("data-days") || "", 10);
+      applyQuickDateRange(days);
+      clearDateRangeQuickSelection();
+      btn.classList.add("active");
+      refreshUI();
+    });
   });
 
   document.querySelectorAll(".filter-btn").forEach((btn) => {
@@ -670,6 +710,7 @@ function bindUi() {
     const endEl = document.getElementById("endDate");
     state.filters.startDate = normalize(startEl.value);
     state.filters.endDate = normalize(endEl.value);
+    clearDateRangeQuickSelection();
 
     document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
     document.querySelectorAll('.filter-btn[data-value="all"]').forEach((b) => b.classList.add("active"));
