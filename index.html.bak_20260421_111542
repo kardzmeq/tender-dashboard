@@ -5,41 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>sbp Tenders Hub</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="supabase-config.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
   <h1>sbp Tenders Hub</h1>
-  <section id="authPanel" class="auth-panel">
-    <div id="authStatus" class="auth-status">Nicht angemeldet</div>
-    <div class="auth-grid">
-      <form id="registerForm" class="auth-form">
-        <h2>Registrieren</h2>
-        <label for="registerEmail">E-Mail</label>
-        <input id="registerEmail" type="email" required autocomplete="email">
-        <label for="registerPassword">Passwort</label>
-        <input id="registerPassword" type="password" required autocomplete="new-password" minlength="8">
-        <button class="action-btn" type="submit">Registrieren</button>
-      </form>
-      <form id="loginForm" class="auth-form">
-        <h2>Anmelden</h2>
-        <label for="loginEmail">E-Mail</label>
-        <input id="loginEmail" type="email" required autocomplete="email">
-        <label for="loginPassword">Passwort</label>
-        <input id="loginPassword" type="password" required autocomplete="current-password">
-        <button class="action-btn submit-btn" type="submit">Anmelden</button>
-      </form>
-      <div class="auth-form auth-actions">
-        <h2>Konto</h2>
-        <p>Kommentare und globale Score-Overrides sind nur für registrierte Nutzer verfügbar.</p>
-        <button id="logoutBtn" class="action-btn" type="button">Abmelden</button>
-      </div>
-    </div>
-    <div id="authMessage" class="auth-message" aria-live="polite"></div>
-  </section>
-
   <div id="loadStatus" class="period-banner">Lade Datei...</div>
   <p id="metaInfo" class="meta"></p>
   <div id="loadWarnings" class="warnings" aria-live="polite"></div>

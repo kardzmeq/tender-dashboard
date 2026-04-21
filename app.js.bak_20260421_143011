@@ -485,9 +485,8 @@ function updateFilterCountBadges() {
 }
 
 function renderComments(project) {
-  if (!state.auth.user) return "";
-
   const comments = state.remote.commentsByKey.get(project._tenderKey) || [];
+  const canWrite = !!state.auth.user;
   const myUserId = state.auth.user ? state.auth.user.id : "";
 
   const listHtml = comments.length
@@ -506,13 +505,15 @@ function renderComments(project) {
     }).join("\n")
     : '<p class="muted">Noch keine Kommentare vorhanden.</p>';
 
-  const formHtml = `
-    <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Kommentar</label>
-      <textarea name="comment_text" required maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Kommentar speichern</button>
-    </form>
-  `;
+  const formHtml = canWrite
+    ? `
+      <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
+        <label>Kommentar</label>
+        <textarea name="comment_text" required maxlength="2000"></textarea>
+        <button class="action-btn" type="submit">Kommentar speichern</button>
+      </form>
+    `
+    : '<p class="muted">Bitte anmelden, um Kommentare zu schreiben.</p>';
 
   return `
     <section class="card-section">
@@ -524,10 +525,9 @@ function renderComments(project) {
 }
 
 function renderOverrides(project) {
-  if (!state.auth.user) return "";
-
   const history = getOverrideHistory(project._tenderKey);
   const latest = getLatestOverride(project._tenderKey);
+  const canWrite = !!state.auth.user;
 
   const historyHtml = history.length
     ? history.slice().reverse().map((entry, idx) => {
@@ -547,15 +547,17 @@ function renderOverrides(project) {
     }).join("\n")
     : '<p class="muted">Noch keine Overrides vorhanden.</p>';
 
-  const formHtml = `
-    <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Neuer globaler Relevanzwert (1-10)</label>
-      <input name="score_value" type="number" min="1" max="10" step="1" required>
-      <label>Begruendung (optional)</label>
-      <textarea name="reason_text" maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Override speichern</button>
-    </form>
-  `;
+  const formHtml = canWrite
+    ? `
+      <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
+        <label>Neuer globaler Relevanzwert (1-10)</label>
+        <input name="score_value" type="number" min="1" max="10" step="1" required>
+        <label>Begruendung (optional)</label>
+        <textarea name="reason_text" maxlength="2000"></textarea>
+        <button class="action-btn" type="submit">Override speichern</button>
+      </form>
+    `
+    : '<p class="muted">Bitte anmelden, um globale Overrides zu setzen.</p>';
 
   const scoreState = latest
     ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`

@@ -9,64 +9,6 @@ h1 {
   margin-bottom: 8px;
 }
 
-.auth-panel {
-  margin: 8px 0 14px 0;
-  padding: 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.auth-status {
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.auth-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.auth-form {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #fff;
-}
-
-.auth-form h2 {
-  margin: 0 0 4px 0;
-  font-size: 1rem;
-}
-
-.auth-form input,
-.auth-form textarea {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.92rem;
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.auth-actions p {
-  margin: 0;
-  color: #334155;
-}
-
-.auth-message {
-  margin-top: 8px;
-  color: #166534;
-  font-weight: 600;
-}
-
-.auth-message.error {
-  color: #b91c1c;
-}
-
 .meta {
   margin-bottom: 14px;
   color: #334155;
@@ -245,11 +187,6 @@ h1 {
   color: #1e3a8a;
 }
 
-.tender-key {
-  font-size: 0.76rem;
-  color: #475569;
-}
-
 .project-head {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -339,85 +276,6 @@ h1 {
 
 .field-table td {
   color: #0f172a;
-}
-
-.card-section {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-.card-section h3 {
-  margin: 0 0 8px 0;
-  font-size: 1rem;
-}
-
-.comment-list,
-.override-history {
-  margin: 0;
-  padding: 0;
-}
-
-.comment-item,
-.override-item {
-  list-style: none;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-  background: #f8fafc;
-}
-
-.comment-head,
-.override-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.82rem;
-  color: #334155;
-}
-
-.comment-item p,
-.override-item p {
-  margin: 6px 0;
-}
-
-.comment-form,
-.override-form {
-  display: grid;
-  gap: 6px;
-}
-
-.comment-form textarea,
-.override-form textarea,
-.override-form input {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.9rem;
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.override-item.latest {
-  border-color: #166534;
-  background: #f0fdf4;
-}
-
-.latest-badge {
-  display: inline-block;
-  margin-top: 4px;
-  border-radius: 999px;
-  background: #166534;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 7px;
-}
-
-.muted {
-  color: #64748b;
-  margin: 0 0 8px 0;
 }
 
 @media (max-width: 900px) {

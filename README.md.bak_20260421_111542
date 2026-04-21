@@ -39,18 +39,3 @@ Then open:
 1. Replace `data/ted_results.xlsx` with the newest export.
 2. Commit and push.
 3. GitHub Pages redeploys automatically.
-
-## Supabase setup (comments + login + score overrides)
-
-1. Create a Supabase project.
-2. In Supabase SQL Editor run:
-   - `supabase/schema.sql`
-3. Copy:
-   - `supabase-config.example.js` -> `supabase-config.js`
-4. Insert your values in `supabase-config.js`:
-   - `url`
-   - `anonKey`
-
-Notes:
-- Without `supabase-config.js` values, the dashboard still loads Excel data, but auth/comment/override features stay disabled.
-- Override history is append-only. The newest override entry per tender is used as active score.

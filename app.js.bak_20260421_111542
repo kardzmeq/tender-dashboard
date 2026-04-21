@@ -1,4 +1,4 @@
-const DATA_URL = "./data/ted_results.xlsx";
+﻿const DATA_URL = "./data/ted_results.xlsx";
 const NEW_SHEET = "Agent_2";
 const RESULTS_SHEET = "Agent_2_Results";
 
@@ -29,17 +29,17 @@ const LOCATION_KEYWORDS = {
 const REGION_KEYWORDS = {
   britanien: ["scotland", "wales", "northern ireland", "irland", "ireland"],
   region_nordics_baltics: [
-    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "daenemark", "denmark",
-    "lettland", "latvia", "litauen", "lithuania", "estland", "estonia",
+    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "dänemark", "daenemark", "denmark",
+    "lettland", "latvia", "litauen", "lithuania", "estland", "estonia"
   ],
   region_eastern_balkans: [
     "polen", "poland", "ungarn", "hungary", "slowakei", "slovakia", "tschechien", "czech", "czech republic",
-    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania",
-    "bulgarien", "bulgaria", "moldau", "moldova", "griechenland", "thessaloniki",
+    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumänien", "rumaenien", "romania",
+    "bulgarien", "bulgaria", "moldau", "moldova", "griechenland", "thessaloniki"
   ],
   region_central_europe: [
-    "deutschland", "germany", "oesterreich", "austria", "schweiz", "switzerland", "frankreich", "france",
-    "belgien", "belgium", "niederlande", "netherlands", "luxemburg", "luxembourg",
+    "deutschland", "germany", "österreich", "oesterreich", "austria", "schweiz", "switzerland", "frankreich", "france",
+    "belgien", "belgium", "niederlande", "netherlands", "luxemburg", "luxembourg"
   ],
   region_southern_europe: ["spanien", "spain", "portugal", "italien", "italy", "zypern", "cyprus"],
 };
@@ -56,19 +56,12 @@ const state = {
     endDate: "",
   },
   hasSubmitted: false,
-  auth: {
-    enabled: false,
-    client: null,
-    user: null,
-  },
-  remote: {
-    commentsByKey: new Map(),
-    overridesByKey: new Map(),
-  },
 };
 
 function normalize(v) {
-  if (v === undefined || v === null) return "";
+  if (v === undefined || v === null) {
+    return "";
+  }
   return String(v).trim();
 }
 
@@ -81,56 +74,15 @@ function esc(v) {
     .replace(/'/g, "&#39;");
 }
 
-function authMessage(text, isError = false) {
-  const el = document.getElementById("authMessage");
-  if (!el) return;
-  el.textContent = text;
-  el.classList.toggle("error", isError);
-}
-
-function updateAuthStatus() {
-  const status = document.getElementById("authStatus");
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (!status || !logoutBtn) return;
-
-  if (!state.auth.enabled) {
-    status.textContent = "Supabase nicht konfiguriert - Dashboard läuft ohne Login/Kommentare.";
-    logoutBtn.disabled = true;
-    return;
-  }
-
-  if (state.auth.user) {
-    status.textContent = `Angemeldet als ${state.auth.user.email}`;
-    logoutBtn.disabled = false;
-  } else {
-    status.textContent = "Nicht angemeldet";
-    logoutBtn.disabled = true;
-  }
-}
-
-function toAsciiKey(raw) {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
-}
-
-function buildTenderKey(row, sourceType, index) {
-  const noticeId = normalize(row.id);
-  if (noticeId) return `ted:${noticeId}`;
-
-  const date = normalize(row.date);
-  const title = normalize(row.titel || row.title);
-  const fallback = toAsciiKey(`${sourceType}-${date}-${title}`);
-  return fallback ? `fallback:${fallback}` : `fallback:${sourceType}-${index}`;
-}
-
 function parseSheetRows(workbook, sheetName, sourceType) {
-  if (!workbook.SheetNames.includes(sheetName)) return [];
+  if (!workbook.SheetNames.includes(sheetName)) {
+    return [];
+  }
   const ws = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-  if (!rows.length) return [];
+  if (!rows.length) {
+    return [];
+  }
 
   const headers = rows[0].map((h) => normalize(h).toLowerCase());
   const out = [];
@@ -139,31 +91,44 @@ function parseSheetRows(workbook, sheetName, sourceType) {
     const row = {};
     let hasAny = false;
     headers.forEach((h, idx) => {
-      if (!h) return;
+      if (!h) {
+        return;
+      }
       const val = vals[idx];
-      if (normalize(val)) hasAny = true;
+      if (normalize(val)) {
+        hasAny = true;
+      }
       row[h] = val;
     });
-    if (!hasAny) continue;
+    if (!hasAny) {
+      continue;
+    }
     row._source_type = sourceType;
-    row._tenderKey = buildTenderKey(row, sourceType, i);
-    row._key = `${row._tenderKey}::${i}`;
+    row._key = `${sourceType}::${normalize(row.id)}::${normalize(row.date)}::${normalize(row.titel || row.title)}::${i}`;
     out.push(row);
   }
   return out;
 }
 
 function parseRelevanzScore(value) {
-  if (value === null || value === undefined) return -1;
+  if (value === null || value === undefined) {
+    return -1;
+  }
   const raw = normalize(value).replace(",", ".");
-  if (!raw) return -1;
+  if (!raw) {
+    return -1;
+  }
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : -1;
 }
 
 function parseRowDate(value) {
-  if (value === null || value === undefined || normalize(value) === "") return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (value === null || value === undefined || normalize(value) === "") {
+    return null;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
   if (typeof value === "number") {
     const utcDays = Math.floor(value - 25569);
     const utcValue = utcDays * 86400;
@@ -180,8 +145,12 @@ function parseRowDate(value) {
 
   for (const p of patterns) {
     const m = raw.match(p);
-    if (!m) continue;
-    if (p === patterns[0]) return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+    if (!m) {
+      continue;
+    }
+    if (p === patterns[0]) {
+      return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+    }
     return new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`);
   }
 
@@ -196,24 +165,14 @@ function formatDateInput(dateObj) {
   return `${y}-${m}-${d}`;
 }
 
-function formatDateTime(value) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString("de-DE", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function clearDateRangeQuickSelection() {
   document.querySelectorAll(".date-range-btn").forEach((btn) => btn.classList.remove("active"));
 }
 
 function applyQuickDateRange(days) {
-  if (!Number.isFinite(days) || days < 1) return;
+  if (!Number.isFinite(days) || days < 1) {
+    return;
+  }
 
   const startDate = new Date();
   startDate.setHours(0, 0, 0, 0);
@@ -236,7 +195,9 @@ function applyQuickDateRange(days) {
 
 function parseDisplayDate(value) {
   const d = parseRowDate(value);
-  if (!d) return normalize(value) || "-";
+  if (!d) {
+    return normalize(value) || "-";
+  }
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
@@ -244,13 +205,19 @@ function parseDisplayDate(value) {
 }
 
 function scoreBadgeClass(score) {
-  if (score >= 8) return "high";
-  if (score >= 5) return "mid";
+  if (score >= 8) {
+    return "high";
+  }
+  if (score >= 5) {
+    return "mid";
+  }
   return "low";
 }
 
 function scoreFilterValue(score) {
-  if (score < 0) return "";
+  if (score < 0) {
+    return "";
+  }
   return String(Math.min(10, Math.max(1, Math.round(score))));
 }
 
@@ -272,7 +239,9 @@ function buildNoticeLinks(project) {
 
 function buildGoogleMapsLink(location) {
   const query = normalize(location);
-  if (!query || query === "-") return "";
+  if (!query || query === "-") {
+    return "";
+  }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
@@ -286,24 +255,37 @@ function sourceLabel(sourceType) {
 
 function buildLocationTags(location) {
   const raw = normalize(location).toLowerCase();
-  if (!raw || raw === "-") return new Set(["global_rest"]);
+  if (!raw || raw === "-") {
+    return new Set(["global_rest"]);
+  }
 
   const tags = new Set();
   LOCATION_FILTERS.forEach(([, value]) => {
-    if (value === "global_rest") return;
+    if (value === "global_rest") {
+      return;
+    }
     const keywords = REGION_KEYWORDS[value] || LOCATION_KEYWORDS[value] || [value];
-    if (keywords.some((kw) => raw.includes(kw))) tags.add(value);
+    if (keywords.some((kw) => raw.includes(kw))) {
+      tags.add(value);
+    }
   });
 
-  if (!tags.size) tags.add("global_rest");
+  if (!tags.size) {
+    tags.add("global_rest");
+  }
   return tags;
 }
 
 function extractFirstNumber(value) {
   const raw = normalize(value).toLowerCase().replace(/\s+/g, "");
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
+
   const m = raw.match(/[0-9.,-]+/);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
 
   let token = m[0];
   if (token.includes(",") && token.includes(".")) {
@@ -320,15 +302,19 @@ function extractFirstNumber(value) {
 
 function formatMioEur(value) {
   const raw = normalize(value);
-  if (!raw) return "-";
+  if (!raw) {
+    return "-";
+  }
 
   const number = extractFirstNumber(raw);
-  if (number === null) return raw;
+  if (number === null) {
+    return raw;
+  }
 
   const lower = raw.toLowerCase();
   const isMio = lower.includes("mio") || lower.includes("million");
-  const mioValue = isMio ? number : number / 1000000;
-  return `${mioValue.toFixed(2)} Mio EUR`;
+  const mioValue = isMio ? number : (number / 1000000);
+  return `${mioValue.toFixed(2)} Mio €`;
 }
 
 function renderNamedRows(fields) {
@@ -349,40 +335,13 @@ function enrichRow(row) {
   const winner = normalize(row.gewinner);
   const winnerRole = normalize(row.gewinner_rolle);
 
-  row._baseScore = parseRelevanzScore(row.relevanzbewertung);
-  row._effectiveScore = row._baseScore;
-  row._effectiveScoreRaw = normalize(row.relevanzbewertung) || "-";
-  row._scoreFilter = scoreFilterValue(row._effectiveScore);
+  row._score = parseRelevanzScore(row.relevanzbewertung);
+  row._scoreFilter = scoreFilterValue(row._score);
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
   row._source = normalizeSourceType(row._source_type);
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
   row._dateObj = parseRowDate(row.date);
-}
-
-function getOverrideHistory(tenderKey) {
-  return state.remote.overridesByKey.get(tenderKey) || [];
-}
-
-function getLatestOverride(tenderKey) {
-  const history = getOverrideHistory(tenderKey);
-  if (!history.length) return null;
-  return history[history.length - 1];
-}
-
-function applyEffectiveScores() {
-  state.rows.forEach((row) => {
-    const latest = getLatestOverride(row._tenderKey);
-    if (latest) {
-      row._effectiveScore = parseRelevanzScore(latest.score_value);
-      row._effectiveScoreRaw = normalize(latest.score_value) || "-";
-    } else {
-      row._effectiveScore = row._baseScore;
-      row._effectiveScoreRaw = normalize(row.relevanzbewertung) || "-";
-    }
-    row._scoreFilter = scoreFilterValue(row._effectiveScore);
-  });
-  state.rows.sort((a, b) => b._effectiveScore - a._effectiveScore);
 }
 
 function addDynamicFilterButtons() {
@@ -415,13 +374,22 @@ function addDynamicFilterButtons() {
 function dateWithinRange(rowDate, startDateRaw, endDateRaw) {
   const hasStart = normalize(startDateRaw) !== "";
   const hasEnd = normalize(endDateRaw) !== "";
-  if (!hasStart && !hasEnd) return true;
-  if (!rowDate) return false;
+  if (!hasStart && !hasEnd) {
+    return true;
+  }
+  if (!rowDate) {
+    return false;
+  }
 
   const startDate = hasStart ? new Date(`${startDateRaw}T00:00:00`) : null;
   const endDate = hasEnd ? new Date(`${endDateRaw}T23:59:59`) : null;
-  if (startDate && rowDate < startDate) return false;
-  if (endDate && rowDate > endDate) return false;
+
+  if (startDate && rowDate < startDate) {
+    return false;
+  }
+  if (endDate && rowDate > endDate) {
+    return false;
+  }
   return true;
 }
 
@@ -435,6 +403,7 @@ function matchesFilters(row, override = null) {
     startDate: state.filters.startDate,
     endDate: state.filters.endDate,
   };
+
   const f = { ...base, ...(override || {}) };
 
   const typeMatch = f.type === "all" || row._source === f.type;
@@ -451,7 +420,9 @@ function computeVisibleCount(override = null) {
 }
 
 function ensureButtonBadge(btn) {
-  if (btn.querySelector(".filter-count")) return;
+  if (btn.querySelector(".filter-count")) {
+    return;
+  }
   const label = normalize(btn.textContent);
   btn.setAttribute("data-label", label);
   btn.textContent = "";
@@ -471,108 +442,27 @@ function updateFilterCountBadges() {
     const value = btn.getAttribute("data-value") || "all";
 
     let count = 0;
-    if (group === "type") count = computeVisibleCount({ type: value });
-    else if (group === "location") count = computeVisibleCount({ location: value });
-    else if (group === "category") count = computeVisibleCount({ category: value });
-    else if (group === "score") {
+    if (group === "type") {
+      count = computeVisibleCount({ type: value });
+    } else if (group === "location") {
+      count = computeVisibleCount({ location: value });
+    } else if (group === "category") {
+      count = computeVisibleCount({ category: value });
+    } else if (group === "score") {
       const scoreSet = value === "all" ? new Set() : new Set([value]);
       count = computeVisibleCount({ scores: scoreSet });
     }
 
     const badge = btn.querySelector(".filter-count");
-    if (badge) badge.textContent = String(count);
+    if (badge) {
+      badge.textContent = String(count);
+    }
   });
 }
 
-function renderComments(project) {
-  if (!state.auth.user) return "";
-
-  const comments = state.remote.commentsByKey.get(project._tenderKey) || [];
-  const myUserId = state.auth.user ? state.auth.user.id : "";
-
-  const listHtml = comments.length
-    ? comments.map((comment) => {
-      const canDelete = comment.user_id === myUserId;
-      return `
-        <li class="comment-item">
-          <div class="comment-head">
-            <span>${esc(comment.user_email || "Unbekannt")}</span>
-            <span>${esc(formatDateTime(comment.created_at))}</span>
-          </div>
-          <p>${esc(comment.comment_text).replace(/\n/g, "<br>")}</p>
-          ${canDelete ? `<button class="action-btn comment-delete" type="button" data-comment-id="${esc(comment.id)}">Kommentar loeschen</button>` : ""}
-        </li>
-      `;
-    }).join("\n")
-    : '<p class="muted">Noch keine Kommentare vorhanden.</p>';
-
-  const formHtml = `
-    <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Kommentar</label>
-      <textarea name="comment_text" required maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Kommentar speichern</button>
-    </form>
-  `;
-
-  return `
-    <section class="card-section">
-      <h3>Kommentare</h3>
-      <ul class="comment-list">${listHtml}</ul>
-      ${formHtml}
-    </section>
-  `;
-}
-
-function renderOverrides(project) {
-  if (!state.auth.user) return "";
-
-  const history = getOverrideHistory(project._tenderKey);
-  const latest = getLatestOverride(project._tenderKey);
-
-  const historyHtml = history.length
-    ? history.slice().reverse().map((entry, idx) => {
-      const isLatest = idx === 0;
-      const reason = normalize(entry.reason_text) || "-";
-      return `
-        <li class="override-item ${isLatest ? "latest" : ""}">
-          <div class="override-head">
-            <span>${esc(entry.user_email || "Unbekannt")}</span>
-            <span>${esc(formatDateTime(entry.created_at))}</span>
-          </div>
-          <p><strong>Score:</strong> ${esc(entry.score_value)}</p>
-          <p><strong>Begruendung:</strong> ${esc(reason).replace(/\n/g, "<br>")}</p>
-          ${isLatest ? '<span class="latest-badge">Aktiver Override</span>' : ""}
-        </li>
-      `;
-    }).join("\n")
-    : '<p class="muted">Noch keine Overrides vorhanden.</p>';
-
-  const formHtml = `
-    <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Neuer globaler Relevanzwert (1-10)</label>
-      <input name="score_value" type="number" min="1" max="10" step="1" required>
-      <label>Begruendung (optional)</label>
-      <textarea name="reason_text" maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Override speichern</button>
-    </form>
-  `;
-
-  const scoreState = latest
-    ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`
-    : `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (AI-Original)</p>`;
-
-  return `
-    <section class="card-section">
-      <h3>Relevanz-Overrides</h3>
-      ${scoreState}
-      <div class="override-history">${historyHtml}</div>
-      ${formHtml}
-    </section>
-  `;
-}
-
 function renderCard(project) {
-  const scoreClass = scoreBadgeClass(Math.max(project._effectiveScore, 0));
+  const scoreRaw = normalize(project.relevanzbewertung) || "-";
+  const scoreClass = scoreBadgeClass(Math.max(project._score, 0));
 
   const nummer = esc(normalize(project.id) || "-");
   const datum = esc(parseDisplayDate(project.date));
@@ -648,10 +538,9 @@ function renderCard(project) {
     <article class="project ${scoreClass}" data-key="${esc(project._key)}">
       <div class="card-topline">
         <div class="source-badge">${esc(sourceTypeLabel)}</div>
-        <div class="tender-key">${esc(project._tenderKey)}</div>
       </div>
       <header class="project-head">
-        <div class="score-pill ${scoreClass}">${esc(project._effectiveScoreRaw)}</div>
+        <div class="score-pill ${scoreClass}">${esc(scoreRaw)}</div>
         <div class="head-main">
           <h2>${titel}</h2>
           <div class="head-grid">
@@ -681,9 +570,6 @@ function renderCard(project) {
         <summary>Weitere Informationen</summary>
         <div class="details-content">${weitereTable}</div>
       </details>
-
-      ${renderComments(project)}
-      ${renderOverrides(project)}
     </article>
   `;
 }
@@ -718,137 +604,24 @@ function renderCardsArea() {
 }
 
 function refreshUI() {
-  applyEffectiveScores();
   updateCounts();
   updateFilterCountBadges();
   renderCardsArea();
 }
 
 function activateSingleSelectFilter(group, value, clickedButton) {
-  if (group === "type") state.filters.type = value;
-  if (group === "location") state.filters.location = value;
-  if (group === "category") state.filters.category = value;
+  if (group === "type") {
+    state.filters.type = value;
+  }
+  if (group === "location") {
+    state.filters.location = value;
+  }
+  if (group === "category") {
+    state.filters.category = value;
+  }
 
   document.querySelectorAll(`.filter-btn[data-filter-group="${group}"]`).forEach((b) => b.classList.remove("active"));
   clickedButton.classList.add("active");
-}
-
-function splitChunks(values, size) {
-  const out = [];
-  for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size));
-  return out;
-}
-
-async function fetchByTenderKeys(table, selectColumns, tenderKeys) {
-  const all = [];
-  const chunks = splitChunks(tenderKeys, 200);
-  for (const chunk of chunks) {
-    const { data, error } = await state.auth.client
-      .from(table)
-      .select(selectColumns)
-      .in("tender_key", chunk)
-      .order("created_at", { ascending: true });
-
-    if (error) throw error;
-    all.push(...(data || []));
-  }
-  return all;
-}
-
-function mapByTenderKey(rows) {
-  const out = new Map();
-  rows.forEach((row) => {
-    const key = normalize(row.tender_key);
-    if (!out.has(key)) out.set(key, []);
-    out.get(key).push(row);
-  });
-  return out;
-}
-
-async function loadRemoteData() {
-  if (!state.auth.enabled || !state.auth.user) {
-    state.remote.commentsByKey = new Map();
-    state.remote.overridesByKey = new Map();
-    refreshUI();
-    return;
-  }
-
-  const tenderKeys = [...new Set(state.rows.map((row) => row._tenderKey))];
-  if (!tenderKeys.length) return;
-
-  try {
-    const [comments, overrides] = await Promise.all([
-      fetchByTenderKeys("tender_comments", "id,tender_key,user_id,user_email,comment_text,created_at,updated_at", tenderKeys),
-      fetchByTenderKeys("tender_score_overrides", "id,tender_key,user_id,user_email,score_value,reason_text,created_at", tenderKeys),
-    ]);
-
-    state.remote.commentsByKey = mapByTenderKey(comments || []);
-    state.remote.overridesByKey = mapByTenderKey(overrides || []);
-    refreshUI();
-  } catch (err) {
-    authMessage(`Supabase-Daten konnten nicht geladen werden: ${err.message || err}`, true);
-  }
-}
-
-async function submitComment(form) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-
-  const tenderKey = normalize(form.getAttribute("data-tender-key"));
-  const fd = new FormData(form);
-  const commentText = normalize(fd.get("comment_text"));
-  if (!tenderKey || !commentText) return;
-
-  const { error } = await state.auth.client.from("tender_comments").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    comment_text: commentText,
-  });
-
-  if (error) throw error;
-  form.reset();
-  authMessage("Kommentar gespeichert.");
-  await loadRemoteData();
-}
-
-async function deleteComment(commentId) {
-  const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
-  if (error) throw error;
-  authMessage("Kommentar geloescht.");
-  await loadRemoteData();
-}
-
-async function submitOverride(form) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-
-  const tenderKey = normalize(form.getAttribute("data-tender-key"));
-  const fd = new FormData(form);
-  const scoreValueRaw = normalize(fd.get("score_value"));
-  const reasonText = normalize(fd.get("reason_text"));
-  const scoreValue = Number.parseInt(scoreValueRaw, 10);
-  if (!tenderKey || !Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) {
-    authMessage("Score muss zwischen 1 und 10 liegen.", true);
-    return;
-  }
-
-  const { error } = await state.auth.client.from("tender_score_overrides").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    score_value: scoreValue,
-    reason_text: reasonText || null,
-  });
-
-  if (error) throw error;
-  form.reset();
-  authMessage("Override gespeichert.");
-  await loadRemoteData();
 }
 
 function bindUi() {
@@ -883,7 +656,9 @@ function bindUi() {
     btn.addEventListener("click", () => {
       const group = btn.getAttribute("data-filter-group");
       const value = btn.getAttribute("data-value") || "all";
-      if (!group) return;
+      if (!group) {
+        return;
+      }
 
       if (group === "score") {
         if (value === "all") {
@@ -900,8 +675,11 @@ function bindUi() {
             btn.classList.add("active");
           }
           if (allBtn) {
-            if (state.filters.scores.size === 0) allBtn.classList.add("active");
-            else allBtn.classList.remove("active");
+            if (state.filters.scores.size === 0) {
+              allBtn.classList.add("active");
+            } else {
+              allBtn.classList.remove("active");
+            }
           }
         }
       } else {
@@ -943,50 +721,13 @@ function bindUi() {
     state.hasSubmitted = true;
     refreshUI();
   });
-
-  document.getElementById("cardsPool").addEventListener("submit", async (e) => {
-    const form = e.target;
-    if (!(form instanceof HTMLFormElement)) return;
-
-    if (form.classList.contains("comment-form")) {
-      e.preventDefault();
-      try {
-        await submitComment(form);
-      } catch (err) {
-        authMessage(`Kommentar konnte nicht gespeichert werden: ${err.message || err}`, true);
-      }
-      return;
-    }
-
-    if (form.classList.contains("override-form")) {
-      e.preventDefault();
-      try {
-        await submitOverride(form);
-      } catch (err) {
-        authMessage(`Override konnte nicht gespeichert werden: ${err.message || err}`, true);
-      }
-    }
-  });
-
-  document.getElementById("cardsPool").addEventListener("click", async (e) => {
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (!target.classList.contains("comment-delete")) return;
-
-    const commentId = normalize(target.getAttribute("data-comment-id"));
-    if (!commentId) return;
-
-    try {
-      await deleteComment(commentId);
-    } catch (err) {
-      authMessage(`Kommentar konnte nicht geloescht werden: ${err.message || err}`, true);
-    }
-  });
 }
 
 function initializeDateInputs() {
   const datedRows = state.rows.filter((r) => r._dateObj instanceof Date);
-  if (!datedRows.length) return;
+  if (!datedRows.length) {
+    return;
+  }
 
   datedRows.sort((a, b) => a._dateObj - b._dateObj);
   const minDate = formatDateInput(datedRows[0]._dateObj);
@@ -1006,9 +747,14 @@ async function loadWorkbook() {
   const warningsEl = document.getElementById("loadWarnings");
 
   try {
-    if (!window.XLSX) throw new Error("SheetJS library not loaded.");
+    if (!window.XLSX) {
+      throw new Error("SheetJS library not loaded.");
+    }
+
     const response = await fetch(DATA_URL, { cache: "no-cache" });
-    if (!response.ok) throw new Error(`Could not fetch ${DATA_URL}. HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Could not fetch ${DATA_URL}. HTTP ${response.status}`);
+    }
 
     const buffer = await response.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
@@ -1017,11 +763,16 @@ async function loadWorkbook() {
     const newRows = parseSheetRows(workbook, NEW_SHEET, "new_competition");
     const resultRows = parseSheetRows(workbook, RESULTS_SHEET, "results");
 
-    if (!workbook.SheetNames.includes(NEW_SHEET)) warnings.push(`Worksheet '${NEW_SHEET}' was not found.`);
-    if (!workbook.SheetNames.includes(RESULTS_SHEET)) warnings.push(`Worksheet '${RESULTS_SHEET}' was not found.`);
+    if (!workbook.SheetNames.includes(NEW_SHEET)) {
+      warnings.push(`Worksheet '${NEW_SHEET}' was not found.`);
+    }
+    if (!workbook.SheetNames.includes(RESULTS_SHEET)) {
+      warnings.push(`Worksheet '${RESULTS_SHEET}' was not found.`);
+    }
 
     state.rows = [...newRows, ...resultRows];
     state.rows.forEach((row) => enrichRow(row));
+    state.rows.sort((a, b) => b._score - a._score);
 
     addDynamicFilterButtons();
     bindUi();
@@ -1037,98 +788,4 @@ async function loadWorkbook() {
   }
 }
 
-function initializeSupabaseClient() {
-  const cfg = window.SUPABASE_CONFIG || {};
-  const url = normalize(cfg.url);
-  const anonKey = normalize(cfg.anonKey);
-
-  if (!url || !anonKey) {
-    state.auth.enabled = false;
-    state.auth.client = null;
-    updateAuthStatus();
-    authMessage("Supabase-Konfiguration fehlt. Setze URL + anonKey in supabase-config.js.", true);
-    return;
-  }
-
-  if (!window.supabase || typeof window.supabase.createClient !== "function") {
-    state.auth.enabled = false;
-    state.auth.client = null;
-    updateAuthStatus();
-    authMessage("Supabase library wurde nicht geladen.", true);
-    return;
-  }
-
-  state.auth.client = window.supabase.createClient(url, anonKey);
-  state.auth.enabled = true;
-  updateAuthStatus();
-}
-
-function bindAuthUi() {
-  document.getElementById("registerForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!state.auth.enabled) return;
-
-    const email = normalize(document.getElementById("registerEmail").value);
-    const password = normalize(document.getElementById("registerPassword").value);
-    const { error } = await state.auth.client.auth.signUp({ email, password });
-    if (error) {
-      authMessage(`Registrierung fehlgeschlagen: ${error.message}`, true);
-      return;
-    }
-    authMessage("Registrierung gestartet. Bitte E-Mail-Bestaetigung pruefen.");
-  });
-
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!state.auth.enabled) return;
-
-    const email = normalize(document.getElementById("loginEmail").value);
-    const password = normalize(document.getElementById("loginPassword").value);
-    const { error } = await state.auth.client.auth.signInWithPassword({ email, password });
-    if (error) {
-      authMessage(`Anmeldung fehlgeschlagen: ${error.message}`, true);
-      return;
-    }
-    authMessage("Anmeldung erfolgreich.");
-  });
-
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
-    if (!state.auth.enabled) return;
-    const { error } = await state.auth.client.auth.signOut();
-    if (error) {
-      authMessage(`Abmeldung fehlgeschlagen: ${error.message}`, true);
-      return;
-    }
-    authMessage("Abgemeldet.");
-  });
-}
-
-async function initAuthFlow() {
-  initializeSupabaseClient();
-  bindAuthUi();
-
-  if (!state.auth.enabled) return;
-
-  const { data, error } = await state.auth.client.auth.getSession();
-  if (error) {
-    authMessage(`Session konnte nicht geladen werden: ${error.message}`, true);
-    return;
-  }
-
-  state.auth.user = data.session ? data.session.user : null;
-  updateAuthStatus();
-  await loadRemoteData();
-
-  state.auth.client.auth.onAuthStateChange(async (_event, session) => {
-    state.auth.user = session ? session.user : null;
-    updateAuthStatus();
-    await loadRemoteData();
-  });
-}
-
-async function bootstrap() {
-  await loadWorkbook();
-  await initAuthFlow();
-}
-
-bootstrap();
+loadWorkbook();
