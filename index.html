@@ -97,11 +97,26 @@
         <button class="filter-btn active" data-filter-group="score" data-value="all">All</button>
       </div>
     </div>
-    <div class="button-wrap">
-      <button id="expandAll" class="action-btn">Expand All</button>
-      <button id="collapseAll" class="action-btn">Collapse All</button>
-      <button id="clearFilters" class="action-btn">Clear Filters</button>
-      <button id="submitSelection" class="action-btn submit-btn">Submit Selection</button>
+    <div class="filter-row">
+      <strong>Quick Filters</strong>
+      <div class="button-wrap">
+        <button id="approvedFilterBtn" class="filter-btn" type="button">Approved by AKQ</button>
+        <button id="commentsFilterBtn" class="filter-btn" type="button">Cards with comments</button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <strong>Sortierung</strong>
+      <div class="button-wrap">
+        <select id="sortOrder" class="sort-select">
+          <option value="score_desc">Score (highest first)</option>
+          <option value="date_desc">Date (most recent first)</option>
+          <option value="date_asc">Date (oldest first)</option>
+          <option value="deadline_desc">Abgabefrist (latest first)</option>
+          <option value="deadline_asc">Abgabefrist (earliest first)</option>
+          <option value="cost_desc">Kosten (highest first)</option>
+          <option value="cost_asc">Kosten (lowest first)</option>
+        </select>
+      </div>
     </div>
   </div>
 

@@ -1,6 +1,7 @@
 const DATA_URL = "./data/ted_results.xlsx";
 const NEW_SHEET = "Agent_2";
 const RESULTS_SHEET = "Agent_2_Results";
+const CONFIRMED_STORAGE_KEY = "sbp_tenders_confirmed_keys";
 
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
@@ -54,8 +55,10 @@ const state = {
     query: "",
     startDate: "",
     endDate: "",
+    onlyApproved: false,
+    onlyWithComments: false,
+    sortOrder: "score_desc",
   },
-  hasSubmitted: false,
   auth: {
     enabled: false,
     client: null,
@@ -70,6 +73,7 @@ const state = {
     hasAutoCollapsedAuth: false,
     openCommentForms: new Set(),
     openOverrideForms: new Set(),
+    confirmedTenderKeys: new Set(),
   },
 };
 
@@ -85,6 +89,26 @@ function esc(v) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function loadConfirmedTenderKeys() {
+  try {
+    const raw = window.localStorage.getItem(CONFIRMED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.map((v) => normalize(v)).filter(Boolean));
+  } catch (_err) {
+    return new Set();
+  }
+}
+
+function persistConfirmedTenderKeys() {
+  try {
+    window.localStorage.setItem(CONFIRMED_STORAGE_KEY, JSON.stringify([...state.ui.confirmedTenderKeys]));
+  } catch (_err) {
+    // Ignore localStorage write errors in restricted environments.
+  }
 }
 
 function authMessage(text, isError = false) {
@@ -355,6 +379,16 @@ function formatMioEur(value) {
   return `${mioValue.toFixed(2)} Mio EUR`;
 }
 
+function parseCostSortable(value) {
+  const raw = normalize(value);
+  if (!raw) return Number.NEGATIVE_INFINITY;
+  const number = extractFirstNumber(raw);
+  if (number === null) return Number.NEGATIVE_INFINITY;
+  const lower = raw.toLowerCase();
+  const isMio = lower.includes("mio") || lower.includes("million");
+  return isMio ? number : number / 1000000;
+}
+
 function renderNamedRows(fields) {
   const rows = fields.map(([label, value]) => {
     const safeLabel = esc(label);
@@ -382,6 +416,8 @@ function enrichRow(row) {
   row._source = normalizeSourceType(row._source_type);
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
   row._dateObj = parseRowDate(row.date);
+  row._deadlineObj = parseRowDate(row.abgabefrist);
+  row._costValue = parseCostSortable(row.baukosten_kg300_400);
 }
 
 function getOverrideHistory(tenderKey) {
@@ -406,7 +442,28 @@ function applyEffectiveScores() {
     }
     row._scoreFilter = scoreFilterValue(row._effectiveScore);
   });
-  state.rows.sort((a, b) => b._effectiveScore - a._effectiveScore);
+}
+
+function dateValueOrFallback(dateObj, fallback) {
+  if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return fallback;
+  return dateObj.getTime();
+}
+
+function sortRows(rows) {
+  const order = state.filters.sortOrder;
+  const sorted = rows.slice();
+
+  sorted.sort((a, b) => {
+    if (order === "date_desc") return dateValueOrFallback(b._dateObj, -1) - dateValueOrFallback(a._dateObj, -1);
+    if (order === "date_asc") return dateValueOrFallback(a._dateObj, Number.POSITIVE_INFINITY) - dateValueOrFallback(b._dateObj, Number.POSITIVE_INFINITY);
+    if (order === "deadline_desc") return dateValueOrFallback(b._deadlineObj, -1) - dateValueOrFallback(a._deadlineObj, -1);
+    if (order === "deadline_asc") return dateValueOrFallback(a._deadlineObj, Number.POSITIVE_INFINITY) - dateValueOrFallback(b._deadlineObj, Number.POSITIVE_INFINITY);
+    if (order === "cost_desc") return b._costValue - a._costValue;
+    if (order === "cost_asc") return a._costValue - b._costValue;
+    return b._effectiveScore - a._effectiveScore;
+  });
+
+  return sorted;
 }
 
 function addDynamicFilterButtons() {
@@ -458,6 +515,8 @@ function matchesFilters(row, override = null) {
     query: state.filters.query,
     startDate: state.filters.startDate,
     endDate: state.filters.endDate,
+    onlyApproved: state.filters.onlyApproved,
+    onlyWithComments: state.filters.onlyWithComments,
   };
   const f = { ...base, ...(override || {}) };
 
@@ -467,7 +526,9 @@ function matchesFilters(row, override = null) {
   const scoreMatch = f.scores.size === 0 || f.scores.has(row._scoreFilter);
   const searchMatch = !f.query || row._search.includes(f.query);
   const dateMatch = dateWithinRange(row._dateObj, f.startDate, f.endDate);
-  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch;
+  const approvedMatch = !f.onlyApproved || state.ui.confirmedTenderKeys.has(row._tenderKey);
+  const commentsMatch = !f.onlyWithComments || (state.remote.commentsByKey.get(row._tenderKey) || []).length > 0;
+  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch && approvedMatch && commentsMatch;
 }
 
 function computeVisibleCount(override = null) {
@@ -490,8 +551,9 @@ function ensureButtonBadge(btn) {
 
 function updateFilterCountBadges() {
   document.querySelectorAll(".filter-btn").forEach((btn) => {
-    ensureButtonBadge(btn);
     const group = btn.getAttribute("data-filter-group");
+    if (!group) return;
+    ensureButtonBadge(btn);
     const value = btn.getAttribute("data-value") || "all";
 
     let count = 0;
@@ -542,21 +604,14 @@ function renderComments(project) {
     `
     : "";
 
-  const controlsHtml = `<div class="section-toolbar"><button class="action-btn comment-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button></div>`;
-
   if (!hasComments && !isFormOpen) {
-    return `
-      <section class="card-section compact">
-        ${controlsHtml}
-      </section>
-    `;
+    return "";
   }
 
   return `
     <section class="card-section">
       <h3>Kommentare</h3>
       <ul class="comment-list">${listHtml}</ul>
-      ${controlsHtml}
       ${formHtml}
     </section>
   `;
@@ -569,6 +624,7 @@ function renderOverrides(project) {
   const latest = getLatestOverride(project._tenderKey);
   const isFormOpen = state.ui.openOverrideForms.has(project._tenderKey);
   const hasOverrides = history.length > 0;
+  const myUserId = state.auth.user ? state.auth.user.id : "";
 
   const historyHtml = history.length
     ? history.slice().reverse().map((entry, idx) => {
@@ -583,6 +639,7 @@ function renderOverrides(project) {
           <p><strong>Score:</strong> ${esc(entry.score_value)}</p>
           <p><strong>Begruendung:</strong> ${esc(reason).replace(/\n/g, "<br>")}</p>
           ${isLatest ? '<span class="latest-badge">Aktiver Override</span>' : ""}
+          ${entry.user_id === myUserId ? `<button class="action-btn override-delete" type="button" data-override-id="${esc(entry.id)}">Override loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -600,18 +657,12 @@ function renderOverrides(project) {
     `
     : "";
 
-  const controlsHtml = `<div class="section-toolbar"><button class="action-btn override-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Override-Feld ausblenden" : "Override score"}</button></div>`;
-
   const scoreState = latest
     ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`
     : `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (AI-Original)</p>`;
 
   if (!hasOverrides && !isFormOpen) {
-    return `
-      <section class="card-section compact">
-        ${controlsHtml}
-      </section>
-    `;
+    return "";
   }
 
   return `
@@ -619,9 +670,23 @@ function renderOverrides(project) {
       <h3>Relevanz-Overrides</h3>
       ${scoreState}
       <div class="override-history">${historyHtml}</div>
-      ${controlsHtml}
       ${formHtml}
     </section>
+  `;
+}
+
+function renderCardActions(project) {
+  if (!state.auth.user) return "";
+  const isCommentOpen = state.ui.openCommentForms.has(project._tenderKey);
+  const isOverrideOpen = state.ui.openOverrideForms.has(project._tenderKey);
+  const isConfirmed = state.ui.confirmedTenderKeys.has(project._tenderKey);
+
+  return `
+    <div class="card-actions">
+      <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
+      <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
+      <button class="action-btn confirm-toggle ${isConfirmed ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquisitons team</button>
+    </div>
   `;
 }
 
@@ -656,6 +721,8 @@ function renderCard(project) {
   const overwrittenByHtml = latestOverride
     ? `<p class="override-byline">Overwritten by ${esc(latestOverride.user_email || "Unbekannt")}</p>`
     : "";
+  const isConfirmed = state.ui.confirmedTenderKeys.has(project._tenderKey);
+  const confirmedBadgeHtml = isConfirmed ? '<span class="confirm-badge">Confirmed</span>' : "";
 
   let mainLabel = "Leistungen";
   let mainValue = leistungen;
@@ -729,7 +796,10 @@ function renderCard(project) {
         ${resultsMainFields}
         <p><strong>Relevanzbewertung Erklaerung:</strong><br>${erklaerung}</p>
         ${overwrittenByHtml}
+        ${confirmedBadgeHtml}
       </section>
+
+      ${renderCardActions(project)}
 
       <details class="details-block">
         <summary>Kostenschaetzung</summary>
@@ -748,7 +818,7 @@ function renderCard(project) {
 }
 
 function activeFilteredRows() {
-  return state.rows.filter((row) => matchesFilters(row));
+  return sortRows(state.rows.filter((row) => matchesFilters(row)));
 }
 
 function updateCounts() {
@@ -762,11 +832,6 @@ function updateCounts() {
 
 function renderCardsArea() {
   const pool = document.getElementById("cardsPool");
-  if (!state.hasSubmitted) {
-    pool.innerHTML = "<p>Keine Ergebnisse angezeigt. Klicke auf <strong>Submit Selection</strong>, um die aktuell gefilterten Karten zu laden.</p>";
-    return;
-  }
-
   const filtered = activeFilteredRows();
   if (!filtered.length) {
     pool.innerHTML = "<p>Keine passenden Eintraege gefunden.</p>";
@@ -914,6 +979,13 @@ async function submitOverride(form) {
   await loadRemoteData();
 }
 
+async function deleteOverride(overrideId) {
+  const { error } = await state.auth.client.from("tender_score_overrides").delete().eq("id", overrideId);
+  if (error) throw error;
+  authMessage("Override geloescht.");
+  await loadRemoteData();
+}
+
 function bindUi() {
   document.getElementById("authToggleBtn").addEventListener("click", () => {
     state.ui.authCollapsed = !state.ui.authCollapsed;
@@ -980,37 +1052,23 @@ function bindUi() {
     });
   });
 
-  document.getElementById("expandAll").addEventListener("click", () => {
-    document.querySelectorAll("details").forEach((d) => { d.open = true; });
-  });
-
-  document.getElementById("collapseAll").addEventListener("click", () => {
-    document.querySelectorAll("details").forEach((d) => { d.open = false; });
-  });
-
-  document.getElementById("clearFilters").addEventListener("click", () => {
-    state.filters.type = "all";
-    state.filters.location = "all";
-    state.filters.category = "all";
-    state.filters.scores.clear();
-    state.filters.query = "";
-    document.getElementById("liveSearch").value = "";
-
-    const startEl = document.getElementById("startDate");
-    const endEl = document.getElementById("endDate");
-    state.filters.startDate = normalize(startEl.value);
-    state.filters.endDate = normalize(endEl.value);
-    clearDateRangeQuickSelection();
-
-    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll('.filter-btn[data-value="all"]').forEach((b) => b.classList.add("active"));
+  document.getElementById("approvedFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyApproved = !state.filters.onlyApproved;
+    e.currentTarget.classList.toggle("active", state.filters.onlyApproved);
     refreshUI();
   });
 
-  document.getElementById("submitSelection").addEventListener("click", () => {
-    state.hasSubmitted = true;
+  document.getElementById("commentsFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyWithComments = !state.filters.onlyWithComments;
+    e.currentTarget.classList.toggle("active", state.filters.onlyWithComments);
     refreshUI();
   });
+
+  document.getElementById("sortOrder").addEventListener("change", (e) => {
+    state.filters.sortOrder = normalize(e.target.value) || "score_desc";
+    refreshUI();
+  });
+  document.getElementById("sortOrder").value = state.filters.sortOrder;
 
   document.getElementById("cardsPool").addEventListener("submit", async (e) => {
     const form = e.target;
@@ -1058,6 +1116,27 @@ function bindUi() {
       return;
     }
 
+    if (target.classList.contains("confirm-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      if (state.ui.confirmedTenderKeys.has(tenderKey)) state.ui.confirmedTenderKeys.delete(tenderKey);
+      else state.ui.confirmedTenderKeys.add(tenderKey);
+      persistConfirmedTenderKeys();
+      refreshUI();
+      return;
+    }
+
+    if (target.classList.contains("override-delete")) {
+      const overrideId = normalize(target.getAttribute("data-override-id"));
+      if (!overrideId) return;
+      try {
+        await deleteOverride(overrideId);
+      } catch (err) {
+        authMessage(`Override konnte nicht geloescht werden: ${err.message || err}`, true);
+      }
+      return;
+    }
+
     if (!target.classList.contains("comment-delete")) return;
 
     const commentId = normalize(target.getAttribute("data-comment-id"));
@@ -1071,20 +1150,15 @@ function bindUi() {
 }
 
 function initializeDateInputs() {
-  const datedRows = state.rows.filter((r) => r._dateObj instanceof Date);
-  if (!datedRows.length) return;
-
-  datedRows.sort((a, b) => a._dateObj - b._dateObj);
-  const minDate = formatDateInput(datedRows[0]._dateObj);
-  const maxDate = formatDateInput(datedRows[datedRows.length - 1]._dateObj);
+  const today = formatDateInput(new Date());
 
   const startEl = document.getElementById("startDate");
   const endEl = document.getElementById("endDate");
-  startEl.value = minDate;
-  endEl.value = maxDate;
+  startEl.value = today;
+  endEl.value = today;
 
-  state.filters.startDate = minDate;
-  state.filters.endDate = maxDate;
+  state.filters.startDate = today;
+  state.filters.endDate = today;
 }
 
 async function loadWorkbook() {
@@ -1213,6 +1287,7 @@ async function initAuthFlow() {
 }
 
 async function bootstrap() {
+  state.ui.confirmedTenderKeys = loadConfirmedTenderKeys();
   await loadWorkbook();
   await initAuthFlow();
 }

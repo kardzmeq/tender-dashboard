@@ -220,6 +220,16 @@ h1 {
   gap: 6px;
 }
 
+.sort-select {
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #0f172a;
+  min-width: 270px;
+}
+
 .filter-btn.active {
   background: #0f172a;
   color: white;
@@ -386,11 +396,6 @@ h1 {
   border-top: 1px solid rgba(148, 163, 184, 0.4);
 }
 
-.card-section.compact {
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
 .card-section h3 {
   margin: 0 0 8px 0;
   font-size: 1rem;
@@ -400,6 +405,32 @@ h1 {
 .override-history {
   margin: 0;
   padding: 0;
+}
+
+.card-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-actions .action-btn.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.confirm-badge {
+  display: inline-block;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: #166534;
+  color: #fff;
 }
 
 .comment-item,
@@ -424,6 +455,10 @@ h1 {
 .comment-item p,
 .override-item p {
   margin: 6px 0;
+}
+
+.override-delete {
+  margin-top: 6px;
 }
 
 .comment-form,
@@ -462,10 +497,6 @@ h1 {
 .muted {
   color: #64748b;
   margin: 0 0 8px 0;
-}
-
-.section-toolbar {
-  margin-bottom: 8px;
 }
 
 .override-byline {
