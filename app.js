@@ -1148,11 +1148,9 @@ function setFormPending(form, isPending, pendingLabel = "Speichern...") {
     if (state.ui.pendingForms.has(form)) return;
     state.ui.pendingForms.add(form);
     form.setAttribute("data-busy", "1");
-    form.querySelectorAll("input, textarea, button, select").forEach((el) => {
-      el.disabled = true;
-    });
     if (submitBtn) {
       submitBtn.setAttribute("data-original-label", submitBtn.textContent || "");
+      submitBtn.disabled = true;
       submitBtn.textContent = pendingLabel;
     }
     return;
@@ -1160,10 +1158,8 @@ function setFormPending(form, isPending, pendingLabel = "Speichern...") {
 
   state.ui.pendingForms.delete(form);
   form.removeAttribute("data-busy");
-  form.querySelectorAll("input, textarea, button, select").forEach((el) => {
-    el.disabled = false;
-  });
   if (submitBtn) {
+    submitBtn.disabled = false;
     const original = submitBtn.getAttribute("data-original-label");
     if (original !== null) {
       submitBtn.textContent = original;
