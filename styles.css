@@ -14,6 +14,20 @@ h1 {
   margin-bottom: 8px;
 }
 
+.auth-gate {
+  margin: 10px 0 14px 0;
+  padding: 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  background: #ffffff;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+body:not(.dashboard-locked) .auth-gate {
+  display: none;
+}
+
 .auth-panel {
   position: fixed;
   right: 20px;
@@ -137,6 +151,15 @@ h1 {
   border-radius: 10px;
 }
 
+body.dashboard-locked #loadStatus,
+body.dashboard-locked #metaInfo,
+body.dashboard-locked #loadWarnings,
+body.dashboard-locked .toolbar,
+body.dashboard-locked #resultsCount,
+body.dashboard-locked #cardsPool {
+  display: none;
+}
+
 .search-row input {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -218,6 +241,12 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.action-btn:disabled,
+.filter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .sort-select {
@@ -440,6 +469,27 @@ h1 {
   color: #fff;
 }
 
+.status-badge {
+  display: inline-block;
+  margin-top: 0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.status-badge.request-open {
+  background: #a16207;
+  color: #fff;
+}
+
+.status-badge.edited {
+  background: #0f766e;
+  color: #fff;
+}
+
 .comment-item,
 .override-item {
   list-style: none;
@@ -476,13 +526,37 @@ h1 {
 
 .comment-form textarea,
 .override-form textarea,
-.override-form input {
+.override-form input,
+.field-edit-form textarea,
+.field-edit-form input {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.9rem;
   box-sizing: border-box;
   width: 100%;
+}
+
+.field-edit-form {
+  display: grid;
+  gap: 8px;
+}
+
+.field-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.field-edit-field {
+  display: grid;
+  gap: 4px;
+}
+
+.field-edit-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .override-item.latest {

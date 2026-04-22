@@ -42,6 +42,7 @@
     </div>
     <div id="authMessage" class="auth-message" aria-live="polite"></div>
   </section>
+  <div id="authGate" class="auth-gate" aria-live="polite">Bitte anmelden, um das Dashboard zu sehen.</div>
 
   <div id="loadStatus" class="period-banner">Lade Datei...</div>
   <p id="metaInfo" class="meta"></p>
@@ -100,8 +101,9 @@
     <div class="filter-row">
       <strong>Quick Filters</strong>
       <div class="button-wrap">
-        <button id="approvedFilterBtn" class="filter-btn" type="button">Approved by AKQ</button>
-        <button id="commentsFilterBtn" class="filter-btn" type="button">Cards with comments</button>
+        <button id="verifiedFilterBtn" class="filter-btn" type="button">Verified by Akquistions team</button>
+        <button id="activityFilterBtn" class="filter-btn" type="button">Cards with comments/overrides</button>
+        <button id="approvalRequestFilterBtn" class="filter-btn" type="button">Cards with open AKQ request</button>
       </div>
     </div>
     <div class="filter-row">

@@ -1,7 +1,6 @@
 const DATA_URL = "./data/ted_results.xlsx";
 const NEW_SHEET = "Agent_2";
 const RESULTS_SHEET = "Agent_2_Results";
-const CONFIRMED_STORAGE_KEY = "sbp_tenders_confirmed_keys";
 
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
@@ -35,7 +34,7 @@ const REGION_KEYWORDS = {
   ],
   region_eastern_balkans: [
     "polen", "poland", "ungarn", "hungary", "slowakei", "slovakia", "tschechien", "czech", "czech republic",
-    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania","Rumänien",
+    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania", "Rumänien",
     "bulgarien", "bulgaria", "moldau", "moldova", "griechenland", "thessaloniki",
   ],
   region_central_europe: [
@@ -55,8 +54,9 @@ const state = {
     query: "",
     startDate: "",
     endDate: "",
-    onlyApproved: false,
-    onlyWithComments: false,
+    onlyVerified: false,
+    onlyWithActivity: false,
+    onlyWithOpenRequest: false,
     sortOrder: "score_desc",
   },
   auth: {
@@ -67,13 +67,16 @@ const state = {
   remote: {
     commentsByKey: new Map(),
     overridesByKey: new Map(),
+    verificationsByKey: new Map(),
+    approvalRequestsByKey: new Map(),
+    fieldEditsByKey: new Map(),
   },
   ui: {
     authCollapsed: false,
     hasAutoCollapsedAuth: false,
     openCommentForms: new Set(),
     openOverrideForms: new Set(),
-    confirmedTenderKeys: new Set(),
+    openFieldEditForms: new Set(),
   },
 };
 
@@ -89,26 +92,6 @@ function esc(v) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function loadConfirmedTenderKeys() {
-  try {
-    const raw = window.localStorage.getItem(CONFIRMED_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.map((v) => normalize(v)).filter(Boolean));
-  } catch (_err) {
-    return new Set();
-  }
-}
-
-function persistConfirmedTenderKeys() {
-  try {
-    window.localStorage.setItem(CONFIRMED_STORAGE_KEY, JSON.stringify([...state.ui.confirmedTenderKeys]));
-  } catch (_err) {
-    // Ignore localStorage write errors in restricted environments.
-  }
 }
 
 function authMessage(text, isError = false) {
@@ -128,15 +111,20 @@ function applyAuthPanelVisibility() {
   toggleBtn.textContent = state.ui.authCollapsed ? "Einblenden" : "Ausblenden";
 }
 
+function applyDashboardGate() {
+  document.body.classList.toggle("dashboard-locked", !state.auth.user);
+}
+
 function updateAuthStatus() {
   const status = document.getElementById("authStatus");
   const logoutBtn = document.getElementById("logoutBtn");
   if (!status || !logoutBtn) return;
 
   if (!state.auth.enabled) {
-    status.textContent = "Supabase nicht konfiguriert - Dashboard läuft ohne Login/Kommentare.";
+    status.textContent = "Supabase nicht konfiguriert - Login ist erforderlich.";
     logoutBtn.disabled = true;
     applyAuthPanelVisibility();
+    applyDashboardGate();
     return;
   }
 
@@ -154,6 +142,7 @@ function updateAuthStatus() {
     state.ui.hasAutoCollapsedAuth = false;
   }
   applyAuthPanelVisibility();
+  applyDashboardGate();
 }
 
 function toAsciiKey(raw) {
@@ -430,15 +419,88 @@ function getLatestOverride(tenderKey) {
   return history[history.length - 1];
 }
 
+function getVerificationHistory(tenderKey) {
+  return state.remote.verificationsByKey.get(tenderKey) || [];
+}
+
+function getLatestVerification(tenderKey) {
+  const history = getVerificationHistory(tenderKey);
+  if (!history.length) return null;
+  return history[history.length - 1];
+}
+
+function isVerified(tenderKey) {
+  const latest = getLatestVerification(tenderKey);
+  return !!(latest && latest.is_verified);
+}
+
+function getApprovalRequestHistory(tenderKey) {
+  return state.remote.approvalRequestsByKey.get(tenderKey) || [];
+}
+
+function getLatestApprovalRequest(tenderKey) {
+  const history = getApprovalRequestHistory(tenderKey);
+  if (!history.length) return null;
+  return history[history.length - 1];
+}
+
+function hasOpenApprovalRequest(tenderKey) {
+  const latest = getLatestApprovalRequest(tenderKey);
+  return !!(latest && normalize(latest.status).toLowerCase() === "open");
+}
+
+function getFieldEditHistory(tenderKey) {
+  return state.remote.fieldEditsByKey.get(tenderKey) || [];
+}
+
+function getLatestFieldEdit(tenderKey) {
+  const history = getFieldEditHistory(tenderKey);
+  if (!history.length) return null;
+  return history[history.length - 1];
+}
+
+function hasFieldEdits(tenderKey) {
+  return getFieldEditHistory(tenderKey).length > 0;
+}
+
+function getEffectiveProjectData(project) {
+  const latestEdit = getLatestFieldEdit(project._tenderKey);
+  const payload = latestEdit && typeof latestEdit.edit_payload === "object" && latestEdit.edit_payload
+    ? latestEdit.edit_payload
+    : null;
+  return payload ? { ...project, ...payload } : project;
+}
+
+function rebuildDerivedFields(row, sourceData) {
+  const title = normalize(sourceData.titel || sourceData.title);
+  const lage = normalize(sourceData.projektlage);
+  const category = normalize(sourceData.category);
+  const leistungen = normalize(sourceData.leistungen);
+  const wettbewerb = normalize(sourceData.wettbewerb_art);
+  const winner = normalize(sourceData.gewinner);
+  const winnerRole = normalize(sourceData.gewinner_rolle);
+
+  row._locationTags = buildLocationTags(lage);
+  row._category = category.toLowerCase();
+  row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
+  row._dateObj = parseRowDate(sourceData.date);
+  row._deadlineObj = parseRowDate(sourceData.abgabefrist);
+  row._costValue = parseCostSortable(sourceData.baukosten_kg300_400);
+}
+
 function applyEffectiveScores() {
   state.rows.forEach((row) => {
+    row._effectiveData = getEffectiveProjectData(row);
+    rebuildDerivedFields(row, row._effectiveData);
+
+    row._baseScore = parseRelevanzScore(row._effectiveData.relevanzbewertung);
     const latest = getLatestOverride(row._tenderKey);
     if (latest) {
       row._effectiveScore = parseRelevanzScore(latest.score_value);
       row._effectiveScoreRaw = normalize(latest.score_value) || "-";
     } else {
       row._effectiveScore = row._baseScore;
-      row._effectiveScoreRaw = normalize(row.relevanzbewertung) || "-";
+      row._effectiveScoreRaw = normalize(row._effectiveData.relevanzbewertung) || "-";
     }
     row._scoreFilter = scoreFilterValue(row._effectiveScore);
   });
@@ -515,8 +577,9 @@ function matchesFilters(row, override = null) {
     query: state.filters.query,
     startDate: state.filters.startDate,
     endDate: state.filters.endDate,
-    onlyApproved: state.filters.onlyApproved,
-    onlyWithComments: state.filters.onlyWithComments,
+    onlyVerified: state.filters.onlyVerified,
+    onlyWithActivity: state.filters.onlyWithActivity,
+    onlyWithOpenRequest: state.filters.onlyWithOpenRequest,
   };
   const f = { ...base, ...(override || {}) };
 
@@ -526,9 +589,14 @@ function matchesFilters(row, override = null) {
   const scoreMatch = f.scores.size === 0 || f.scores.has(row._scoreFilter);
   const searchMatch = !f.query || row._search.includes(f.query);
   const dateMatch = dateWithinRange(row._dateObj, f.startDate, f.endDate);
-  const approvedMatch = !f.onlyApproved || state.ui.confirmedTenderKeys.has(row._tenderKey);
-  const commentsMatch = !f.onlyWithComments || (state.remote.commentsByKey.get(row._tenderKey) || []).length > 0;
-  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch && approvedMatch && commentsMatch;
+  const verifiedMatch = !f.onlyVerified || isVerified(row._tenderKey);
+  const activityMatch = !f.onlyWithActivity || (
+    (state.remote.commentsByKey.get(row._tenderKey) || []).length > 0
+    || (state.remote.overridesByKey.get(row._tenderKey) || []).length > 0
+    || hasFieldEdits(row._tenderKey)
+  );
+  const openRequestMatch = !f.onlyWithOpenRequest || hasOpenApprovalRequest(row._tenderKey);
+  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch && verifiedMatch && activityMatch && openRequestMatch;
 }
 
 function computeVisibleCount(override = null) {
@@ -658,7 +726,7 @@ function renderOverrides(project) {
     : "";
 
   const scoreState = latest
-    ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`
+    ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize((project._effectiveData || project).relevanzbewertung) || "-")})</p>`
     : `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (AI-Original)</p>`;
 
   if (!hasOverrides && !isFormOpen) {
@@ -675,54 +743,160 @@ function renderOverrides(project) {
   `;
 }
 
+function editableFieldKeys(project) {
+  const blocked = new Set([
+    "_source_type",
+    "_tenderKey",
+    "_key",
+    "_baseScore",
+    "_effectiveScore",
+    "_effectiveScoreRaw",
+    "_scoreFilter",
+    "_locationTags",
+    "_category",
+    "_source",
+    "_search",
+    "_dateObj",
+    "_deadlineObj",
+    "_costValue",
+    "_effectiveData",
+  ]);
+  return Object.keys(project).filter((key) => !blocked.has(key) && !key.startsWith("_")).sort();
+}
+
+function prettyFieldLabel(key) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function renderFieldEdits(project) {
+  if (!state.auth.user) return "";
+
+  const editHistory = getFieldEditHistory(project._tenderKey);
+  const isFormOpen = state.ui.openFieldEditForms.has(project._tenderKey);
+  const hasEdits = editHistory.length > 0;
+  const myUserId = state.auth.user.id;
+  const effective = project._effectiveData || project;
+
+  if (!hasEdits && !isFormOpen) return "";
+
+  const historyHtml = hasEdits
+    ? editHistory.slice().reverse().map((entry, idx) => {
+      const isLatest = idx === 0;
+      return `
+        <li class="override-item ${isLatest ? "latest" : ""}">
+          <div class="override-head">
+            <span>${esc(entry.user_email || "Unbekannt")}</span>
+            <span>${esc(formatDateTime(entry.created_at))}</span>
+          </div>
+          <p>${isLatest ? "<strong>Aktive Feldkorrektur</strong>" : "Fruehere Feldkorrektur"}</p>
+          ${entry.user_id === myUserId ? `<button class="action-btn field-edit-delete" type="button" data-field-edit-id="${esc(entry.id)}">Korrektur loeschen</button>` : ""}
+        </li>
+      `;
+    }).join("\n")
+    : "";
+
+  const fields = editableFieldKeys(project);
+  const fieldsHtml = fields.map((fieldKey) => {
+    const val = normalize(effective[fieldKey]);
+    const inputId = `field_${toAsciiKey(`${project._tenderKey}_${fieldKey}`)}`;
+    const isLong = val.length > 120 || /\n/.test(val);
+    if (isLong) {
+      return `
+        <div class="field-edit-field">
+          <label for="${esc(inputId)}">${esc(prettyFieldLabel(fieldKey))}</label>
+          <textarea id="${esc(inputId)}" name="${esc(fieldKey)}">${esc(val)}</textarea>
+        </div>
+      `;
+    }
+    return `
+      <div class="field-edit-field">
+        <label for="${esc(inputId)}">${esc(prettyFieldLabel(fieldKey))}</label>
+        <input id="${esc(inputId)}" name="${esc(fieldKey)}" type="text" value="${esc(val)}">
+      </div>
+    `;
+  }).join("\n");
+
+  const formHtml = isFormOpen
+    ? `
+      <form class="field-edit-form" data-tender-key="${esc(project._tenderKey)}">
+        <div class="field-edit-grid">${fieldsHtml}</div>
+        <div class="field-edit-actions">
+          <button class="action-btn submit-btn" type="submit">Felder speichern</button>
+        </div>
+      </form>
+    `
+    : "";
+
+  return `
+    <section class="card-section">
+      <h3>Feldkorrekturen</h3>
+      <ul class="override-history">${historyHtml}</ul>
+      ${formHtml}
+    </section>
+  `;
+}
+
 function renderCardActions(project) {
   if (!state.auth.user) return "";
   const isCommentOpen = state.ui.openCommentForms.has(project._tenderKey);
   const isOverrideOpen = state.ui.openOverrideForms.has(project._tenderKey);
-  const isConfirmed = state.ui.confirmedTenderKeys.has(project._tenderKey);
+  const isFieldEditOpen = state.ui.openFieldEditForms.has(project._tenderKey);
+  const verified = isVerified(project._tenderKey);
+  const hasOpenRequest = hasOpenApprovalRequest(project._tenderKey);
+  const latestRequest = getLatestApprovalRequest(project._tenderKey);
+  const canResolveRequest = hasOpenRequest && latestRequest && latestRequest.user_id === state.auth.user.id;
+  const requestLabel = hasOpenRequest
+    ? (canResolveRequest ? "Resolve my AKQ request" : "AKQ request open")
+    : "Request approval by AKQ";
 
   return `
     <div class="card-actions">
       <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
       <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
-      <button class="action-btn confirm-toggle ${isConfirmed ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquisitons team</button>
+      <button class="action-btn field-edit-toggle ${isFieldEditOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isFieldEditOpen ? "Edit fields ausblenden" : "Edit card fields"}</button>
+      <button class="action-btn verify-toggle ${verified ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquistions team</button>
+      <button class="action-btn request-approval-toggle ${hasOpenRequest ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}" ${hasOpenRequest && !canResolveRequest ? "disabled" : ""}>${requestLabel}</button>
     </div>
   `;
 }
 
 function renderCard(project) {
+  const view = project._effectiveData || project;
   const scoreClass = scoreBadgeClass(Math.max(project._effectiveScore, 0));
 
-  const nummer = esc(normalize(project.id) || "-");
-  const datum = esc(parseDisplayDate(project.date));
-  const abgabefrist = esc(parseDisplayDate(project.abgabefrist));
-  const titel = esc(normalize(project.titel || project.title) || "-");
-  const kurzbeschreibung = esc(normalize(project.kurzbeschreibung) || "-").replace(/\n/g, "<br>");
+  const nummer = esc(normalize(view.id) || "-");
+  const datum = esc(parseDisplayDate(view.date));
+  const abgabefrist = esc(parseDisplayDate(view.abgabefrist));
+  const titel = esc(normalize(view.titel || view.title) || "-");
+  const kurzbeschreibung = esc(normalize(view.kurzbeschreibung) || "-").replace(/\n/g, "<br>");
 
-  const lageText = normalize(project.projektlage) || "-";
+  const lageText = normalize(view.projektlage) || "-";
   const mapsLink = buildGoogleMapsLink(lageText);
   const lage = mapsLink
     ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener noreferrer">${esc(lageText)}</a>`
     : esc(lageText);
 
-  const categoryValue = esc(normalize(project.category) || "-");
-  const leistungen = esc(normalize(project.leistungen) || "-").replace(/\n/g, "<br>");
-  const wettbewerbsart = esc(normalize(project.wettbewerb_art) || "-").replace(/\n/g, "<br>");
-  const gewinner = esc(normalize(project.gewinner) || "-").replace(/\n/g, "<br>");
-  const gewinnerRolle = esc(normalize(project.gewinner_rolle) || "-").replace(/\n/g, "<br>");
+  const categoryValue = esc(normalize(view.category) || "-");
+  const leistungen = esc(normalize(view.leistungen) || "-").replace(/\n/g, "<br>");
+  const wettbewerbsart = esc(normalize(view.wettbewerb_art) || "-").replace(/\n/g, "<br>");
+  const gewinner = esc(normalize(view.gewinner) || "-").replace(/\n/g, "<br>");
+  const gewinnerRolle = esc(normalize(view.gewinner_rolle) || "-").replace(/\n/g, "<br>");
   const erklaerung = esc(
-    normalize(project.relevanzbewertung_erklaerung) || normalize(project.relevanzbewertung_begruendung) || "-"
+    normalize(view.relevanzbewertung_erklaerung) || normalize(view.relevanzbewertung_begruendung) || "-"
   ).replace(/\n/g, "<br>");
 
-  const [detailLink, pdfLink] = buildNoticeLinks(project);
+  const [detailLink, pdfLink] = buildNoticeLinks(view);
   const sourceType = project._source;
   const sourceTypeLabel = sourceLabel(sourceType);
   const latestOverride = getLatestOverride(project._tenderKey);
   const overwrittenByHtml = latestOverride
     ? `<p class="override-byline">Overwritten by ${esc(latestOverride.user_email || "Unbekannt")}</p>`
     : "";
-  const isConfirmed = state.ui.confirmedTenderKeys.has(project._tenderKey);
-  const verifiedBadgeHtml = isConfirmed ? '<span class="confirm-badge">Verified by AKQ</span>' : "";
+  const verifiedBadgeHtml = isVerified(project._tenderKey) ? '<span class="confirm-badge">Verified by AKQ</span>' : "";
+  const requestBadgeHtml = hasOpenApprovalRequest(project._tenderKey) ? '<span class="status-badge request-open">AKQ Request Open</span>' : "";
+  const editedBadgeHtml = hasFieldEdits(project._tenderKey) ? '<span class="status-badge edited">Fields Edited</span>' : "";
 
   let mainLabel = "Leistungen";
   let mainValue = leistungen;
@@ -739,34 +913,34 @@ function renderCard(project) {
 
   const kostenTable = sourceType === "results"
     ? renderNamedRows([
-      ["Baukosten kg300/400", formatMioEur(project.baukosten_kg300_400)],
-      ["Erklaerung der Baukosten", normalize(project.baukosten_erklaerung) || "-"],
+      ["Baukosten kg300/400", formatMioEur(view.baukosten_kg300_400)],
+      ["Erklaerung der Baukosten", normalize(view.baukosten_erklaerung) || "-"],
     ])
     : renderNamedRows([
-      ["Baukosten kg300/400", formatMioEur(project.baukosten_kg300_400)],
-      ["Erklaerung der Baukosten", normalize(project.baukosten_erklaerung) || "-"],
-      ["Honorar sbp", formatMioEur(project.geschaetztes_honorar_sbp)],
-      ["Erklaerung Honorar SBP", normalize(project.honorar_erklaerung) || "-"],
+      ["Baukosten kg300/400", formatMioEur(view.baukosten_kg300_400)],
+      ["Erklaerung der Baukosten", normalize(view.baukosten_erklaerung) || "-"],
+      ["Honorar sbp", formatMioEur(view.geschaetztes_honorar_sbp)],
+      ["Erklaerung Honorar SBP", normalize(view.honorar_erklaerung) || "-"],
     ]);
 
   const weitereTable = sourceType === "results"
     ? renderNamedRows([
-      ["Wettbewerbsart", normalize(project.wettbewerb_art) || "-"],
-      ["Gewinner", normalize(project.gewinner) || "-"],
-      ["Gewinner Rolle", normalize(project.gewinner_rolle) || "-"],
-      ["Gewinner Kontakt", normalize(project.gewinner_kontakt) || "-"],
-      ["Projektbeteiligte", normalize(project.projektbeteiligte) || "-"],
-      ["Naechste Schritte", normalize(project.naechste_schritte) || "-"],
-      ["Notes", normalize(project.notes) || "-"],
+      ["Wettbewerbsart", normalize(view.wettbewerb_art) || "-"],
+      ["Gewinner", normalize(view.gewinner) || "-"],
+      ["Gewinner Rolle", normalize(view.gewinner_rolle) || "-"],
+      ["Gewinner Kontakt", normalize(view.gewinner_kontakt) || "-"],
+      ["Projektbeteiligte", normalize(view.projektbeteiligte) || "-"],
+      ["Naechste Schritte", normalize(view.naechste_schritte) || "-"],
+      ["Notes", normalize(view.notes) || "-"],
     ])
     : renderNamedRows([
-      ["Abgabefrist", parseDisplayDate(project.abgabefrist)],
-      ["Leistungen", normalize(project.leistungen) || "-"],
-      ["Umfang", normalize(project.umfang) || "-"],
-      ["Zuschlagskriterien", normalize(project.zuschlagskriterien) || "-"],
-      ["Referenzen/Qualifikationen", normalize(project.referenzen_qualifikationen) || "-"],
-      ["Auftraggeber", normalize(project.auftraggeber) || "-"],
-      ["Notes", normalize(project.notes) || "-"],
+      ["Abgabefrist", parseDisplayDate(view.abgabefrist)],
+      ["Leistungen", normalize(view.leistungen) || "-"],
+      ["Umfang", normalize(view.umfang) || "-"],
+      ["Zuschlagskriterien", normalize(view.zuschlagskriterien) || "-"],
+      ["Referenzen/Qualifikationen", normalize(view.referenzen_qualifikationen) || "-"],
+      ["Auftraggeber", normalize(view.auftraggeber) || "-"],
+      ["Notes", normalize(view.notes) || "-"],
     ]);
 
   return `
@@ -775,6 +949,8 @@ function renderCard(project) {
         <div class="card-topline-left">
           <div class="source-badge">${esc(sourceTypeLabel)}</div>
           ${verifiedBadgeHtml}
+          ${requestBadgeHtml}
+          ${editedBadgeHtml}
         </div>
         <div class="tender-key">${esc(project._tenderKey)}</div>
       </div>
@@ -815,11 +991,13 @@ function renderCard(project) {
 
       ${renderComments(project)}
       ${renderOverrides(project)}
+      ${renderFieldEdits(project)}
     </article>
   `;
 }
 
 function activeFilteredRows() {
+  if (!state.auth.user) return [];
   return sortRows(state.rows.filter((row) => matchesFilters(row)));
 }
 
@@ -834,6 +1012,10 @@ function updateCounts() {
 
 function renderCardsArea() {
   const pool = document.getElementById("cardsPool");
+  if (!state.auth.user) {
+    pool.innerHTML = "";
+    return;
+  }
   const filtered = activeFilteredRows();
   if (!filtered.length) {
     pool.innerHTML = "<p>Keine passenden Eintraege gefunden.</p>";
@@ -844,6 +1026,7 @@ function renderCardsArea() {
 }
 
 function refreshUI() {
+  applyDashboardGate();
   applyEffectiveScores();
   updateCounts();
   updateFilterCountBadges();
@@ -895,8 +1078,12 @@ async function loadRemoteData() {
   if (!state.auth.enabled || !state.auth.user) {
     state.remote.commentsByKey = new Map();
     state.remote.overridesByKey = new Map();
+    state.remote.verificationsByKey = new Map();
+    state.remote.approvalRequestsByKey = new Map();
+    state.remote.fieldEditsByKey = new Map();
     state.ui.openCommentForms.clear();
     state.ui.openOverrideForms.clear();
+    state.ui.openFieldEditForms.clear();
     refreshUI();
     return;
   }
@@ -905,13 +1092,19 @@ async function loadRemoteData() {
   if (!tenderKeys.length) return;
 
   try {
-    const [comments, overrides] = await Promise.all([
+    const [comments, overrides, verifications, approvalRequests, fieldEdits] = await Promise.all([
       fetchByTenderKeys("tender_comments", "id,tender_key,user_id,user_email,comment_text,created_at,updated_at", tenderKeys),
       fetchByTenderKeys("tender_score_overrides", "id,tender_key,user_id,user_email,score_value,reason_text,created_at", tenderKeys),
+      fetchByTenderKeys("tender_verifications", "id,tender_key,user_id,user_email,is_verified,created_at", tenderKeys),
+      fetchByTenderKeys("tender_approval_requests", "id,tender_key,user_id,user_email,status,created_at,updated_at", tenderKeys),
+      fetchByTenderKeys("tender_field_edits", "id,tender_key,user_id,user_email,edit_payload,created_at", tenderKeys),
     ]);
 
     state.remote.commentsByKey = mapByTenderKey(comments || []);
     state.remote.overridesByKey = mapByTenderKey(overrides || []);
+    state.remote.verificationsByKey = mapByTenderKey(verifications || []);
+    state.remote.approvalRequestsByKey = mapByTenderKey(approvalRequests || []);
+    state.remote.fieldEditsByKey = mapByTenderKey(fieldEdits || []);
     refreshUI();
   } catch (err) {
     authMessage(`Supabase-Daten konnten nicht geladen werden: ${err.message || err}`, true);
@@ -988,6 +1181,90 @@ async function deleteOverride(overrideId) {
   await loadRemoteData();
 }
 
+async function toggleVerification(tenderKey) {
+  if (!state.auth.user) {
+    authMessage("Bitte zuerst anmelden.", true);
+    return;
+  }
+  const currentlyVerified = isVerified(tenderKey);
+  const { error } = await state.auth.client.from("tender_verifications").insert({
+    tender_key: tenderKey,
+    user_id: state.auth.user.id,
+    user_email: state.auth.user.email,
+    is_verified: !currentlyVerified,
+  });
+  if (error) throw error;
+  authMessage(!currentlyVerified ? "Karte verifiziert." : "Verifizierung entfernt.");
+  await loadRemoteData();
+}
+
+async function toggleApprovalRequest(tenderKey) {
+  if (!state.auth.user) {
+    authMessage("Bitte zuerst anmelden.", true);
+    return;
+  }
+
+  const latest = getLatestApprovalRequest(tenderKey);
+  const isOpen = !!(latest && normalize(latest.status).toLowerCase() === "open");
+  if (isOpen) {
+    if (latest.user_id !== state.auth.user.id) {
+      authMessage("Nur der Ersteller kann diese Anfrage schliessen.", true);
+      return;
+    }
+    const { error } = await state.auth.client.from("tender_approval_requests")
+      .update({ status: "resolved" })
+      .eq("id", latest.id);
+    if (error) throw error;
+    authMessage("AKQ-Anfrage geschlossen.");
+    await loadRemoteData();
+    return;
+  }
+
+  const { error } = await state.auth.client.from("tender_approval_requests").insert({
+    tender_key: tenderKey,
+    user_id: state.auth.user.id,
+    user_email: state.auth.user.email,
+    status: "open",
+  });
+  if (error) throw error;
+  authMessage("AKQ-Anfrage erstellt.");
+  await loadRemoteData();
+}
+
+async function submitFieldEdit(form) {
+  if (!state.auth.user) {
+    authMessage("Bitte zuerst anmelden.", true);
+    return;
+  }
+
+  const tenderKey = normalize(form.getAttribute("data-tender-key"));
+  if (!tenderKey) return;
+
+  const fd = new FormData(form);
+  const payload = {};
+  for (const [key, value] of fd.entries()) {
+    payload[normalize(key)] = normalize(value);
+  }
+
+  const { error } = await state.auth.client.from("tender_field_edits").insert({
+    tender_key: tenderKey,
+    user_id: state.auth.user.id,
+    user_email: state.auth.user.email,
+    edit_payload: payload,
+  });
+  if (error) throw error;
+  state.ui.openFieldEditForms.delete(tenderKey);
+  authMessage("Feldkorrektur gespeichert.");
+  await loadRemoteData();
+}
+
+async function deleteFieldEdit(fieldEditId) {
+  const { error } = await state.auth.client.from("tender_field_edits").delete().eq("id", fieldEditId);
+  if (error) throw error;
+  authMessage("Feldkorrektur geloescht.");
+  await loadRemoteData();
+}
+
 function bindUi() {
   document.getElementById("authToggleBtn").addEventListener("click", () => {
     state.ui.authCollapsed = !state.ui.authCollapsed;
@@ -1054,15 +1331,21 @@ function bindUi() {
     });
   });
 
-  document.getElementById("approvedFilterBtn").addEventListener("click", (e) => {
-    state.filters.onlyApproved = !state.filters.onlyApproved;
-    e.currentTarget.classList.toggle("active", state.filters.onlyApproved);
+  document.getElementById("verifiedFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyVerified = !state.filters.onlyVerified;
+    e.currentTarget.classList.toggle("active", state.filters.onlyVerified);
     refreshUI();
   });
 
-  document.getElementById("commentsFilterBtn").addEventListener("click", (e) => {
-    state.filters.onlyWithComments = !state.filters.onlyWithComments;
-    e.currentTarget.classList.toggle("active", state.filters.onlyWithComments);
+  document.getElementById("activityFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyWithActivity = !state.filters.onlyWithActivity;
+    e.currentTarget.classList.toggle("active", state.filters.onlyWithActivity);
+    refreshUI();
+  });
+
+  document.getElementById("approvalRequestFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyWithOpenRequest = !state.filters.onlyWithOpenRequest;
+    e.currentTarget.classList.toggle("active", state.filters.onlyWithOpenRequest);
     refreshUI();
   });
 
@@ -1093,6 +1376,16 @@ function bindUi() {
       } catch (err) {
         authMessage(`Override konnte nicht gespeichert werden: ${err.message || err}`, true);
       }
+      return;
+    }
+
+    if (form.classList.contains("field-edit-form")) {
+      e.preventDefault();
+      try {
+        await submitFieldEdit(form);
+      } catch (err) {
+        authMessage(`Feldkorrektur konnte nicht gespeichert werden: ${err.message || err}`, true);
+      }
     }
   });
 
@@ -1118,13 +1411,34 @@ function bindUi() {
       return;
     }
 
-    if (target.classList.contains("confirm-toggle")) {
+    if (target.classList.contains("field-edit-toggle")) {
       const tenderKey = normalize(target.getAttribute("data-tender-key"));
       if (!tenderKey) return;
-      if (state.ui.confirmedTenderKeys.has(tenderKey)) state.ui.confirmedTenderKeys.delete(tenderKey);
-      else state.ui.confirmedTenderKeys.add(tenderKey);
-      persistConfirmedTenderKeys();
+      if (state.ui.openFieldEditForms.has(tenderKey)) state.ui.openFieldEditForms.delete(tenderKey);
+      else state.ui.openFieldEditForms.add(tenderKey);
       refreshUI();
+      return;
+    }
+
+    if (target.classList.contains("verify-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      try {
+        await toggleVerification(tenderKey);
+      } catch (err) {
+        authMessage(`Verifizierung konnte nicht gespeichert werden: ${err.message || err}`, true);
+      }
+      return;
+    }
+
+    if (target.classList.contains("request-approval-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      try {
+        await toggleApprovalRequest(tenderKey);
+      } catch (err) {
+        authMessage(`AKQ-Anfrage konnte nicht gespeichert werden: ${err.message || err}`, true);
+      }
       return;
     }
 
@@ -1135,6 +1449,17 @@ function bindUi() {
         await deleteOverride(overrideId);
       } catch (err) {
         authMessage(`Override konnte nicht geloescht werden: ${err.message || err}`, true);
+      }
+      return;
+    }
+
+    if (target.classList.contains("field-edit-delete")) {
+      const fieldEditId = normalize(target.getAttribute("data-field-edit-id"));
+      if (!fieldEditId) return;
+      try {
+        await deleteFieldEdit(fieldEditId);
+      } catch (err) {
+        authMessage(`Feldkorrektur konnte nicht geloescht werden: ${err.message || err}`, true);
       }
       return;
     }
@@ -1289,7 +1614,7 @@ async function initAuthFlow() {
 }
 
 async function bootstrap() {
-  state.ui.confirmedTenderKeys = loadConfirmedTenderKeys();
+  applyDashboardGate();
   await loadWorkbook();
   await initAuthFlow();
 }

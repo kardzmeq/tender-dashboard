@@ -70,9 +70,64 @@ create table if not exists public.tender_score_overrides (
 create index if not exists tender_score_overrides_tender_key_idx on public.tender_score_overrides (tender_key);
 create index if not exists tender_score_overrides_created_at_idx on public.tender_score_overrides (created_at desc);
 
+create table if not exists public.tender_verifications (
+  id uuid primary key default gen_random_uuid(),
+  tender_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  is_verified boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists tender_verifications_tender_key_idx on public.tender_verifications (tender_key);
+create index if not exists tender_verifications_created_at_idx on public.tender_verifications (created_at desc);
+
+create table if not exists public.tender_approval_requests (
+  id uuid primary key default gen_random_uuid(),
+  tender_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  status text not null check (status in ('open', 'resolved')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists tender_approval_requests_tender_key_idx on public.tender_approval_requests (tender_key);
+create index if not exists tender_approval_requests_created_at_idx on public.tender_approval_requests (created_at desc);
+
+create or replace function public.set_approval_request_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_approval_request_updated_at on public.tender_approval_requests;
+create trigger set_approval_request_updated_at
+before update on public.tender_approval_requests
+for each row execute procedure public.set_approval_request_updated_at();
+
+create table if not exists public.tender_field_edits (
+  id uuid primary key default gen_random_uuid(),
+  tender_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  edit_payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists tender_field_edits_tender_key_idx on public.tender_field_edits (tender_key);
+create index if not exists tender_field_edits_created_at_idx on public.tender_field_edits (created_at desc);
+
 alter table public.profiles enable row level security;
 alter table public.tender_comments enable row level security;
 alter table public.tender_score_overrides enable row level security;
+alter table public.tender_verifications enable row level security;
+alter table public.tender_approval_requests enable row level security;
+alter table public.tender_field_edits enable row level security;
 
 drop policy if exists "profiles_select_authenticated" on public.profiles;
 create policy "profiles_select_authenticated"
@@ -132,4 +187,66 @@ for insert
 to authenticated
 with check (auth.uid() = user_id);
 
--- Append-only history for overrides: no update/delete policy on purpose.
+drop policy if exists "overrides_delete_own" on public.tender_score_overrides;
+create policy "overrides_delete_own"
+on public.tender_score_overrides
+for delete
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "verifications_select_authenticated" on public.tender_verifications;
+create policy "verifications_select_authenticated"
+on public.tender_verifications
+for select
+to authenticated
+using (true);
+
+drop policy if exists "verifications_insert_authenticated" on public.tender_verifications;
+create policy "verifications_insert_authenticated"
+on public.tender_verifications
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "approval_requests_select_authenticated" on public.tender_approval_requests;
+create policy "approval_requests_select_authenticated"
+on public.tender_approval_requests
+for select
+to authenticated
+using (true);
+
+drop policy if exists "approval_requests_insert_authenticated" on public.tender_approval_requests;
+create policy "approval_requests_insert_authenticated"
+on public.tender_approval_requests
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "approval_requests_update_own" on public.tender_approval_requests;
+create policy "approval_requests_update_own"
+on public.tender_approval_requests
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "field_edits_select_authenticated" on public.tender_field_edits;
+create policy "field_edits_select_authenticated"
+on public.tender_field_edits
+for select
+to authenticated
+using (true);
+
+drop policy if exists "field_edits_insert_authenticated" on public.tender_field_edits;
+create policy "field_edits_insert_authenticated"
+on public.tender_field_edits
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "field_edits_delete_own" on public.tender_field_edits;
+create policy "field_edits_delete_own"
+on public.tender_field_edits
+for delete
+to authenticated
+using (auth.uid() = user_id);
