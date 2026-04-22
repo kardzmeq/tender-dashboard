@@ -65,6 +65,12 @@ const state = {
     commentsByKey: new Map(),
     overridesByKey: new Map(),
   },
+  ui: {
+    authCollapsed: false,
+    hasAutoCollapsedAuth: false,
+    openCommentForms: new Set(),
+    openOverrideForms: new Set(),
+  },
 };
 
 function normalize(v) {
@@ -88,6 +94,14 @@ function authMessage(text, isError = false) {
   el.classList.toggle("error", isError);
 }
 
+function applyAuthPanelVisibility() {
+  const panel = document.getElementById("authPanel");
+  const toggleBtn = document.getElementById("authToggleBtn");
+  if (!panel || !toggleBtn) return;
+  panel.classList.toggle("collapsed", state.ui.authCollapsed);
+  toggleBtn.textContent = state.ui.authCollapsed ? "Einblenden" : "Ausblenden";
+}
+
 function updateAuthStatus() {
   const status = document.getElementById("authStatus");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -96,16 +110,24 @@ function updateAuthStatus() {
   if (!state.auth.enabled) {
     status.textContent = "Supabase nicht konfiguriert - Dashboard läuft ohne Login/Kommentare.";
     logoutBtn.disabled = true;
+    applyAuthPanelVisibility();
     return;
   }
 
   if (state.auth.user) {
     status.textContent = `Angemeldet als ${state.auth.user.email}`;
     logoutBtn.disabled = false;
+    if (!state.ui.hasAutoCollapsedAuth) {
+      state.ui.authCollapsed = true;
+      state.ui.hasAutoCollapsedAuth = true;
+    }
   } else {
     status.textContent = "Nicht angemeldet";
     logoutBtn.disabled = true;
+    state.ui.authCollapsed = false;
+    state.ui.hasAutoCollapsedAuth = false;
   }
+  applyAuthPanelVisibility();
 }
 
 function toAsciiKey(raw) {
@@ -485,10 +507,9 @@ function updateFilterCountBadges() {
 }
 
 function renderComments(project) {
-  if (!state.auth.user) return "";
-
   const comments = state.remote.commentsByKey.get(project._tenderKey) || [];
   const myUserId = state.auth.user ? state.auth.user.id : "";
+  const isFormOpen = state.ui.openCommentForms.has(project._tenderKey);
 
   const listHtml = comments.length
     ? comments.map((comment) => {
@@ -506,28 +527,36 @@ function renderComments(project) {
     }).join("\n")
     : '<p class="muted">Noch keine Kommentare vorhanden.</p>';
 
-  const formHtml = `
-    <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Kommentar</label>
-      <textarea name="comment_text" required maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Kommentar speichern</button>
-    </form>
-  `;
+  const formHtml = state.auth.user
+    ? (isFormOpen
+      ? `
+        <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
+          <label>Kommentar</label>
+          <textarea name="comment_text" required maxlength="2000"></textarea>
+          <button class="action-btn" type="submit">Kommentar speichern</button>
+        </form>
+      `
+      : "")
+    : '<p class="muted">Zum Kommentieren bitte anmelden.</p>';
+
+  const controlsHtml = state.auth.user
+    ? `<div class="section-toolbar"><button class="action-btn comment-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button></div>`
+    : "";
 
   return `
     <section class="card-section">
       <h3>Kommentare</h3>
       <ul class="comment-list">${listHtml}</ul>
+      ${controlsHtml}
       ${formHtml}
     </section>
   `;
 }
 
 function renderOverrides(project) {
-  if (!state.auth.user) return "";
-
   const history = getOverrideHistory(project._tenderKey);
   const latest = getLatestOverride(project._tenderKey);
+  const isFormOpen = state.ui.openOverrideForms.has(project._tenderKey);
 
   const historyHtml = history.length
     ? history.slice().reverse().map((entry, idx) => {
@@ -547,15 +576,23 @@ function renderOverrides(project) {
     }).join("\n")
     : '<p class="muted">Noch keine Overrides vorhanden.</p>';
 
-  const formHtml = `
-    <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
-      <label>Neuer globaler Relevanzwert (1-10)</label>
-      <input name="score_value" type="number" min="1" max="10" step="1" required>
-      <label>Begruendung (optional)</label>
-      <textarea name="reason_text" maxlength="2000"></textarea>
-      <button class="action-btn" type="submit">Override speichern</button>
-    </form>
-  `;
+  const formHtml = state.auth.user
+    ? (isFormOpen
+      ? `
+        <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
+          <label>Neuer globaler Relevanzwert (1-10)</label>
+          <input name="score_value" type="number" min="1" max="10" step="1" required>
+          <label>Begruendung (optional)</label>
+          <textarea name="reason_text" maxlength="2000"></textarea>
+          <button class="action-btn" type="submit">Override speichern</button>
+        </form>
+      `
+      : "")
+    : '<p class="muted">Zum Ueberschreiben bitte anmelden.</p>';
+
+  const controlsHtml = state.auth.user
+    ? `<div class="section-toolbar"><button class="action-btn override-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Override-Feld ausblenden" : "Override score"}</button></div>`
+    : "";
 
   const scoreState = latest
     ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`
@@ -566,6 +603,7 @@ function renderOverrides(project) {
       <h3>Relevanz-Overrides</h3>
       ${scoreState}
       <div class="override-history">${historyHtml}</div>
+      ${controlsHtml}
       ${formHtml}
     </section>
   `;
@@ -598,6 +636,10 @@ function renderCard(project) {
   const [detailLink, pdfLink] = buildNoticeLinks(project);
   const sourceType = project._source;
   const sourceTypeLabel = sourceLabel(sourceType);
+  const latestOverride = getLatestOverride(project._tenderKey);
+  const overwrittenByHtml = latestOverride
+    ? `<p class="override-byline">Overwritten by ${esc(latestOverride.user_email || "Unbekannt")}</p>`
+    : "";
 
   let mainLabel = "Leistungen";
   let mainValue = leistungen;
@@ -670,6 +712,7 @@ function renderCard(project) {
         <p><strong>${esc(mainLabel)}:</strong><br>${mainValue}</p>
         ${resultsMainFields}
         <p><strong>Relevanzbewertung Erklaerung:</strong><br>${erklaerung}</p>
+        ${overwrittenByHtml}
       </section>
 
       <details class="details-block">
@@ -769,6 +812,8 @@ async function loadRemoteData() {
   if (!state.auth.enabled || !state.auth.user) {
     state.remote.commentsByKey = new Map();
     state.remote.overridesByKey = new Map();
+    state.ui.openCommentForms.clear();
+    state.ui.openOverrideForms.clear();
     refreshUI();
     return;
   }
@@ -809,6 +854,7 @@ async function submitComment(form) {
   });
 
   if (error) throw error;
+  state.ui.openCommentForms.delete(tenderKey);
   form.reset();
   authMessage("Kommentar gespeichert.");
   await loadRemoteData();
@@ -846,12 +892,18 @@ async function submitOverride(form) {
   });
 
   if (error) throw error;
+  state.ui.openOverrideForms.delete(tenderKey);
   form.reset();
   authMessage("Override gespeichert.");
   await loadRemoteData();
 }
 
 function bindUi() {
+  document.getElementById("authToggleBtn").addEventListener("click", () => {
+    state.ui.authCollapsed = !state.ui.authCollapsed;
+    applyAuthPanelVisibility();
+  });
+
   document.getElementById("liveSearch").addEventListener("input", (e) => {
     state.filters.query = normalize(e.target.value).toLowerCase();
     refreshUI();
@@ -971,11 +1023,29 @@ function bindUi() {
   document.getElementById("cardsPool").addEventListener("click", async (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
+
+    if (target.classList.contains("comment-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      if (state.ui.openCommentForms.has(tenderKey)) state.ui.openCommentForms.delete(tenderKey);
+      else state.ui.openCommentForms.add(tenderKey);
+      refreshUI();
+      return;
+    }
+
+    if (target.classList.contains("override-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      if (state.ui.openOverrideForms.has(tenderKey)) state.ui.openOverrideForms.delete(tenderKey);
+      else state.ui.openOverrideForms.add(tenderKey);
+      refreshUI();
+      return;
+    }
+
     if (!target.classList.contains("comment-delete")) return;
 
     const commentId = normalize(target.getAttribute("data-comment-id"));
     if (!commentId) return;
-
     try {
       await deleteComment(commentId);
     } catch (err) {
