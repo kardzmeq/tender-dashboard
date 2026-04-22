@@ -70,6 +70,7 @@ const state = {
     verificationsByKey: new Map(),
     approvalRequestsByKey: new Map(),
     fieldEditsByKey: new Map(),
+    loadRequestId: 0,
   },
   ui: {
     authCollapsed: false,
@@ -77,6 +78,7 @@ const state = {
     openCommentForms: new Set(),
     openOverrideForms: new Set(),
     openFieldEditForms: new Set(),
+    pendingForms: new Set(),
   },
 };
 
@@ -656,7 +658,7 @@ function renderComments(project) {
             <span>${esc(formatDateTime(comment.created_at))}</span>
           </div>
           <p>${esc(comment.comment_text).replace(/\n/g, "<br>")}</p>
-          ${canDelete ? `<button class="action-btn comment-delete" type="button" data-comment-id="${esc(comment.id)}">Kommentar loeschen</button>` : ""}
+          ${canDelete ? `<button class="action-btn comment-delete" type="button" data-comment-id="${esc(comment.id)}" data-tender-key="${esc(project._tenderKey)}">Kommentar loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -707,7 +709,7 @@ function renderOverrides(project) {
           <p><strong>Score:</strong> ${esc(entry.score_value)}</p>
           <p><strong>Begruendung:</strong> ${esc(reason).replace(/\n/g, "<br>")}</p>
           ${isLatest ? '<span class="latest-badge">Aktiver Override</span>' : ""}
-          ${entry.user_id === myUserId ? `<button class="action-btn override-delete" type="button" data-override-id="${esc(entry.id)}">Override loeschen</button>` : ""}
+          ${entry.user_id === myUserId ? `<button class="action-btn override-delete" type="button" data-override-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Override loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -791,7 +793,7 @@ function renderFieldEdits(project) {
             <span>${esc(formatDateTime(entry.created_at))}</span>
           </div>
           <p>${isLatest ? "<strong>Aktive Feldkorrektur</strong>" : "Fruehere Feldkorrektur"}</p>
-          ${entry.user_id === myUserId ? `<button class="action-btn field-edit-delete" type="button" data-field-edit-id="${esc(entry.id)}">Korrektur loeschen</button>` : ""}
+          ${entry.user_id === myUserId ? `<button class="action-btn field-edit-delete" type="button" data-field-edit-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Korrektur loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -1074,6 +1076,113 @@ function mapByTenderKey(rows) {
   return out;
 }
 
+function mergeByTenderKeys(existingMap, replacementMap, tenderKeys) {
+  const merged = new Map(existingMap);
+  tenderKeys.forEach((key) => {
+    merged.delete(key);
+    const rows = replacementMap.get(key) || [];
+    if (rows.length) merged.set(key, rows);
+  });
+  return merged;
+}
+
+function setFormPending(form, isPending, pendingLabel = "Speichern...") {
+  if (!(form instanceof HTMLFormElement)) return;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (isPending) {
+    if (state.ui.pendingForms.has(form)) return;
+    state.ui.pendingForms.add(form);
+    form.setAttribute("data-busy", "1");
+    form.querySelectorAll("input, textarea, button, select").forEach((el) => {
+      el.disabled = true;
+    });
+    if (submitBtn) {
+      submitBtn.setAttribute("data-original-label", submitBtn.textContent || "");
+      submitBtn.textContent = pendingLabel;
+    }
+    return;
+  }
+
+  state.ui.pendingForms.delete(form);
+  form.removeAttribute("data-busy");
+  form.querySelectorAll("input, textarea, button, select").forEach((el) => {
+    el.disabled = false;
+  });
+  if (submitBtn) {
+    const original = submitBtn.getAttribute("data-original-label");
+    if (original !== null) {
+      submitBtn.textContent = original;
+      submitBtn.removeAttribute("data-original-label");
+    }
+  }
+}
+
+async function runWithButtonLock(button, pendingLabel, task) {
+  if (!(button instanceof HTMLButtonElement)) return;
+  if (button.getAttribute("data-busy") === "1") return;
+  const originalText = button.textContent || "";
+  button.setAttribute("data-busy", "1");
+  button.disabled = true;
+  if (pendingLabel) button.textContent = pendingLabel;
+  try {
+    await task();
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("data-busy");
+    button.textContent = originalText;
+  }
+}
+
+async function loadRemoteDataForTenderKeys(tenderKeys, options = {}) {
+  const { replaceAll = false, refresh = true } = options;
+  const uniqueKeys = [...new Set((tenderKeys || []).map((k) => normalize(k)).filter(Boolean))];
+  if (!uniqueKeys.length) {
+    if (replaceAll) {
+      state.remote.commentsByKey = new Map();
+      state.remote.overridesByKey = new Map();
+      state.remote.verificationsByKey = new Map();
+      state.remote.approvalRequestsByKey = new Map();
+      state.remote.fieldEditsByKey = new Map();
+      if (refresh) refreshUI();
+    }
+    return;
+  }
+
+  const requestId = state.remote.loadRequestId + 1;
+  state.remote.loadRequestId = requestId;
+  const [comments, overrides, verifications, approvalRequests, fieldEdits] = await Promise.all([
+    fetchByTenderKeys("tender_comments", "id,tender_key,user_id,user_email,comment_text,created_at,updated_at", uniqueKeys),
+    fetchByTenderKeys("tender_score_overrides", "id,tender_key,user_id,user_email,score_value,reason_text,created_at", uniqueKeys),
+    fetchByTenderKeys("tender_verifications", "id,tender_key,user_id,user_email,is_verified,created_at", uniqueKeys),
+    fetchByTenderKeys("tender_approval_requests", "id,tender_key,user_id,user_email,status,created_at,updated_at", uniqueKeys),
+    fetchByTenderKeys("tender_field_edits", "id,tender_key,user_id,user_email,edit_payload,created_at", uniqueKeys),
+  ]);
+
+  if (requestId !== state.remote.loadRequestId) return;
+
+  const commentsMap = mapByTenderKey(comments || []);
+  const overridesMap = mapByTenderKey(overrides || []);
+  const verificationsMap = mapByTenderKey(verifications || []);
+  const requestsMap = mapByTenderKey(approvalRequests || []);
+  const fieldEditsMap = mapByTenderKey(fieldEdits || []);
+
+  if (replaceAll) {
+    state.remote.commentsByKey = commentsMap;
+    state.remote.overridesByKey = overridesMap;
+    state.remote.verificationsByKey = verificationsMap;
+    state.remote.approvalRequestsByKey = requestsMap;
+    state.remote.fieldEditsByKey = fieldEditsMap;
+  } else {
+    state.remote.commentsByKey = mergeByTenderKeys(state.remote.commentsByKey, commentsMap, uniqueKeys);
+    state.remote.overridesByKey = mergeByTenderKeys(state.remote.overridesByKey, overridesMap, uniqueKeys);
+    state.remote.verificationsByKey = mergeByTenderKeys(state.remote.verificationsByKey, verificationsMap, uniqueKeys);
+    state.remote.approvalRequestsByKey = mergeByTenderKeys(state.remote.approvalRequestsByKey, requestsMap, uniqueKeys);
+    state.remote.fieldEditsByKey = mergeByTenderKeys(state.remote.fieldEditsByKey, fieldEditsMap, uniqueKeys);
+  }
+
+  if (refresh) refreshUI();
+}
+
 async function loadRemoteData() {
   if (!state.auth.enabled || !state.auth.user) {
     state.remote.commentsByKey = new Map();
@@ -1089,23 +1198,13 @@ async function loadRemoteData() {
   }
 
   const tenderKeys = [...new Set(state.rows.map((row) => row._tenderKey))];
-  if (!tenderKeys.length) return;
+  if (!tenderKeys.length) {
+    await loadRemoteDataForTenderKeys([], { replaceAll: true, refresh: true });
+    return;
+  }
 
   try {
-    const [comments, overrides, verifications, approvalRequests, fieldEdits] = await Promise.all([
-      fetchByTenderKeys("tender_comments", "id,tender_key,user_id,user_email,comment_text,created_at,updated_at", tenderKeys),
-      fetchByTenderKeys("tender_score_overrides", "id,tender_key,user_id,user_email,score_value,reason_text,created_at", tenderKeys),
-      fetchByTenderKeys("tender_verifications", "id,tender_key,user_id,user_email,is_verified,created_at", tenderKeys),
-      fetchByTenderKeys("tender_approval_requests", "id,tender_key,user_id,user_email,status,created_at,updated_at", tenderKeys),
-      fetchByTenderKeys("tender_field_edits", "id,tender_key,user_id,user_email,edit_payload,created_at", tenderKeys),
-    ]);
-
-    state.remote.commentsByKey = mapByTenderKey(comments || []);
-    state.remote.overridesByKey = mapByTenderKey(overrides || []);
-    state.remote.verificationsByKey = mapByTenderKey(verifications || []);
-    state.remote.approvalRequestsByKey = mapByTenderKey(approvalRequests || []);
-    state.remote.fieldEditsByKey = mapByTenderKey(fieldEdits || []);
-    refreshUI();
+    await loadRemoteDataForTenderKeys(tenderKeys, { replaceAll: true, refresh: true });
   } catch (err) {
     authMessage(`Supabase-Daten konnten nicht geladen werden: ${err.message || err}`, true);
   }
@@ -1120,7 +1219,10 @@ async function submitComment(form) {
   const tenderKey = normalize(form.getAttribute("data-tender-key"));
   const fd = new FormData(form);
   const commentText = normalize(fd.get("comment_text"));
-  if (!tenderKey || !commentText) return;
+  if (!tenderKey || !commentText) {
+    authMessage("Kommentar darf nicht leer sein.", true);
+    return;
+  }
 
   const { error } = await state.auth.client.from("tender_comments").insert({
     tender_key: tenderKey,
@@ -1133,14 +1235,15 @@ async function submitComment(form) {
   state.ui.openCommentForms.delete(tenderKey);
   form.reset();
   authMessage("Kommentar gespeichert.");
-  await loadRemoteData();
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
-async function deleteComment(commentId) {
+async function deleteComment(commentId, tenderKey) {
   const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
   if (error) throw error;
   authMessage("Kommentar geloescht.");
-  await loadRemoteData();
+  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  else await loadRemoteData();
 }
 
 async function submitOverride(form) {
@@ -1153,8 +1256,8 @@ async function submitOverride(form) {
   const fd = new FormData(form);
   const scoreValueRaw = normalize(fd.get("score_value"));
   const reasonText = normalize(fd.get("reason_text"));
-  const scoreValue = Number.parseInt(scoreValueRaw, 10);
-  if (!tenderKey || !Number.isFinite(scoreValue) || scoreValue < 1 || scoreValue > 10) {
+  const scoreValue = Number(scoreValueRaw);
+  if (!tenderKey || !Number.isInteger(scoreValue) || scoreValue < 1 || scoreValue > 10) {
     authMessage("Score muss zwischen 1 und 10 liegen.", true);
     return;
   }
@@ -1171,14 +1274,15 @@ async function submitOverride(form) {
   state.ui.openOverrideForms.delete(tenderKey);
   form.reset();
   authMessage("Override gespeichert.");
-  await loadRemoteData();
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
-async function deleteOverride(overrideId) {
+async function deleteOverride(overrideId, tenderKey) {
   const { error } = await state.auth.client.from("tender_score_overrides").delete().eq("id", overrideId);
   if (error) throw error;
   authMessage("Override geloescht.");
-  await loadRemoteData();
+  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  else await loadRemoteData();
 }
 
 async function toggleVerification(tenderKey) {
@@ -1195,7 +1299,7 @@ async function toggleVerification(tenderKey) {
   });
   if (error) throw error;
   authMessage(!currentlyVerified ? "Karte verifiziert." : "Verifizierung entfernt.");
-  await loadRemoteData();
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function toggleApprovalRequest(tenderKey) {
@@ -1216,7 +1320,7 @@ async function toggleApprovalRequest(tenderKey) {
       .eq("id", latest.id);
     if (error) throw error;
     authMessage("AKQ-Anfrage geschlossen.");
-    await loadRemoteData();
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
     return;
   }
 
@@ -1228,7 +1332,7 @@ async function toggleApprovalRequest(tenderKey) {
   });
   if (error) throw error;
   authMessage("AKQ-Anfrage erstellt.");
-  await loadRemoteData();
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function submitFieldEdit(form) {
@@ -1255,14 +1359,15 @@ async function submitFieldEdit(form) {
   if (error) throw error;
   state.ui.openFieldEditForms.delete(tenderKey);
   authMessage("Feldkorrektur gespeichert.");
-  await loadRemoteData();
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
-async function deleteFieldEdit(fieldEditId) {
+async function deleteFieldEdit(fieldEditId, tenderKey) {
   const { error } = await state.auth.client.from("tender_field_edits").delete().eq("id", fieldEditId);
   if (error) throw error;
   authMessage("Feldkorrektur geloescht.");
-  await loadRemoteData();
+  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  else await loadRemoteData();
 }
 
 function bindUi() {
@@ -1358,33 +1463,46 @@ function bindUi() {
   document.getElementById("cardsPool").addEventListener("submit", async (e) => {
     const form = e.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.getAttribute("data-busy") === "1") {
+      e.preventDefault();
+      return;
+    }
 
     if (form.classList.contains("comment-form")) {
       e.preventDefault();
+      setFormPending(form, true, "Speichert...");
       try {
         await submitComment(form);
       } catch (err) {
         authMessage(`Kommentar konnte nicht gespeichert werden: ${err.message || err}`, true);
+      } finally {
+        setFormPending(form, false);
       }
       return;
     }
 
     if (form.classList.contains("override-form")) {
       e.preventDefault();
+      setFormPending(form, true, "Speichert...");
       try {
         await submitOverride(form);
       } catch (err) {
         authMessage(`Override konnte nicht gespeichert werden: ${err.message || err}`, true);
+      } finally {
+        setFormPending(form, false);
       }
       return;
     }
 
     if (form.classList.contains("field-edit-form")) {
       e.preventDefault();
+      setFormPending(form, true, "Speichert...");
       try {
         await submitFieldEdit(form);
       } catch (err) {
         authMessage(`Feldkorrektur konnte nicht gespeichert werden: ${err.message || err}`, true);
+      } finally {
+        setFormPending(form, false);
       }
     }
   });
@@ -1423,56 +1541,69 @@ function bindUi() {
     if (target.classList.contains("verify-toggle")) {
       const tenderKey = normalize(target.getAttribute("data-tender-key"));
       if (!tenderKey) return;
-      try {
-        await toggleVerification(tenderKey);
-      } catch (err) {
-        authMessage(`Verifizierung konnte nicht gespeichert werden: ${err.message || err}`, true);
-      }
+      await runWithButtonLock(target, "Speichert...", async () => {
+        try {
+          await toggleVerification(tenderKey);
+        } catch (err) {
+          authMessage(`Verifizierung konnte nicht gespeichert werden: ${err.message || err}`, true);
+        }
+      });
       return;
     }
 
     if (target.classList.contains("request-approval-toggle")) {
       const tenderKey = normalize(target.getAttribute("data-tender-key"));
       if (!tenderKey) return;
-      try {
-        await toggleApprovalRequest(tenderKey);
-      } catch (err) {
-        authMessage(`AKQ-Anfrage konnte nicht gespeichert werden: ${err.message || err}`, true);
-      }
+      await runWithButtonLock(target, "Speichert...", async () => {
+        try {
+          await toggleApprovalRequest(tenderKey);
+        } catch (err) {
+          authMessage(`AKQ-Anfrage konnte nicht gespeichert werden: ${err.message || err}`, true);
+        }
+      });
       return;
     }
 
     if (target.classList.contains("override-delete")) {
       const overrideId = normalize(target.getAttribute("data-override-id"));
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
       if (!overrideId) return;
-      try {
-        await deleteOverride(overrideId);
-      } catch (err) {
-        authMessage(`Override konnte nicht geloescht werden: ${err.message || err}`, true);
-      }
+      await runWithButtonLock(target, "Loescht...", async () => {
+        try {
+          await deleteOverride(overrideId, tenderKey);
+        } catch (err) {
+          authMessage(`Override konnte nicht geloescht werden: ${err.message || err}`, true);
+        }
+      });
       return;
     }
 
     if (target.classList.contains("field-edit-delete")) {
       const fieldEditId = normalize(target.getAttribute("data-field-edit-id"));
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
       if (!fieldEditId) return;
-      try {
-        await deleteFieldEdit(fieldEditId);
-      } catch (err) {
-        authMessage(`Feldkorrektur konnte nicht geloescht werden: ${err.message || err}`, true);
-      }
+      await runWithButtonLock(target, "Loescht...", async () => {
+        try {
+          await deleteFieldEdit(fieldEditId, tenderKey);
+        } catch (err) {
+          authMessage(`Feldkorrektur konnte nicht geloescht werden: ${err.message || err}`, true);
+        }
+      });
       return;
     }
 
     if (!target.classList.contains("comment-delete")) return;
 
     const commentId = normalize(target.getAttribute("data-comment-id"));
+    const tenderKey = normalize(target.getAttribute("data-tender-key"));
     if (!commentId) return;
-    try {
-      await deleteComment(commentId);
-    } catch (err) {
-      authMessage(`Kommentar konnte nicht geloescht werden: ${err.message || err}`, true);
-    }
+    await runWithButtonLock(target, "Loescht...", async () => {
+      try {
+        await deleteComment(commentId, tenderKey);
+      } catch (err) {
+        authMessage(`Kommentar konnte nicht geloescht werden: ${err.message || err}`, true);
+      }
+    });
   });
 }
 
