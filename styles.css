@@ -282,6 +282,13 @@ h1 {
   margin-bottom: 10px;
 }
 
+.card-topline-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .source-badge {
   display: inline-block;
   border-radius: 999px;
@@ -422,7 +429,7 @@ h1 {
 
 .confirm-badge {
   display: inline-block;
-  margin-top: 8px;
+  margin-top: 0;
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 0.72rem;

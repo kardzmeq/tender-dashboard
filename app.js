@@ -30,12 +30,12 @@ const LOCATION_KEYWORDS = {
 const REGION_KEYWORDS = {
   britanien: ["scotland", "wales", "northern ireland", "irland", "ireland"],
   region_nordics_baltics: [
-    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "daenemark", "denmark",
+    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "daenemark", "denmark", "Dänemark",
     "lettland", "latvia", "litauen", "lithuania", "estland", "estonia",
   ],
   region_eastern_balkans: [
     "polen", "poland", "ungarn", "hungary", "slowakei", "slovakia", "tschechien", "czech", "czech republic",
-    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania",
+    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania","Rumänien",
     "bulgarien", "bulgaria", "moldau", "moldova", "griechenland", "thessaloniki",
   ],
   region_central_europe: [
@@ -722,7 +722,7 @@ function renderCard(project) {
     ? `<p class="override-byline">Overwritten by ${esc(latestOverride.user_email || "Unbekannt")}</p>`
     : "";
   const isConfirmed = state.ui.confirmedTenderKeys.has(project._tenderKey);
-  const confirmedBadgeHtml = isConfirmed ? '<span class="confirm-badge">Confirmed</span>' : "";
+  const verifiedBadgeHtml = isConfirmed ? '<span class="confirm-badge">Verified by AKQ</span>' : "";
 
   let mainLabel = "Leistungen";
   let mainValue = leistungen;
@@ -772,7 +772,10 @@ function renderCard(project) {
   return `
     <article class="project ${scoreClass}" data-key="${esc(project._key)}">
       <div class="card-topline">
-        <div class="source-badge">${esc(sourceTypeLabel)}</div>
+        <div class="card-topline-left">
+          <div class="source-badge">${esc(sourceTypeLabel)}</div>
+          ${verifiedBadgeHtml}
+        </div>
         <div class="tender-key">${esc(project._tenderKey)}</div>
       </div>
       <header class="project-head">
@@ -796,7 +799,6 @@ function renderCard(project) {
         ${resultsMainFields}
         <p><strong>Relevanzbewertung Erklaerung:</strong><br>${erklaerung}</p>
         ${overwrittenByHtml}
-        ${confirmedBadgeHtml}
       </section>
 
       ${renderCardActions(project)}
