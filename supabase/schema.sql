@@ -41,6 +41,7 @@ create table if not exists public.tender_comments (
 
 create index if not exists tender_comments_tender_key_idx on public.tender_comments (tender_key);
 create index if not exists tender_comments_created_at_idx on public.tender_comments (created_at desc);
+create index if not exists tender_comments_tender_key_created_at_idx on public.tender_comments (tender_key, created_at desc);
 
 create or replace function public.set_comment_updated_at()
 returns trigger

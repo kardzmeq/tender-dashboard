@@ -946,7 +946,7 @@ function renderCard(project) {
     ]);
 
   return `
-    <article class="project ${scoreClass}" data-key="${esc(project._key)}">
+    <article class="project ${scoreClass}" data-key="${esc(project._key)}" data-tender-key="${esc(project._tenderKey)}">
       <div class="card-topline">
         <div class="card-topline-left">
           <div class="source-badge">${esc(sourceTypeLabel)}</div>
@@ -998,14 +998,69 @@ function renderCard(project) {
   `;
 }
 
+function ensureCardsEmptyState() {
+  const pool = document.getElementById("cardsPool");
+  if (!pool) return;
+  const hasCards = !!pool.querySelector("article.project");
+  if (!hasCards) {
+    pool.innerHTML = "<p>Keine passenden Eintraege gefunden.</p>";
+  }
+}
+
+function findCardElementByTenderKey(tenderKey) {
+  const pool = document.getElementById("cardsPool");
+  if (!pool) return null;
+  return [...pool.querySelectorAll("article.project")].find((el) => normalize(el.getAttribute("data-tender-key")) === tenderKey) || null;
+}
+
+function refreshSingleCardByTenderKey(tenderKey) {
+  const row = state.rows.find((r) => r._tenderKey === tenderKey);
+  if (!row) {
+    refreshUI();
+    return;
+  }
+
+  const existing = findCardElementByTenderKey(tenderKey);
+  const shouldShow = !!state.auth.user && matchesFilters(row);
+
+  if (!existing && shouldShow) {
+    // Positioning depends on global sort/filter order.
+    refreshUI();
+    return;
+  }
+  if (!existing && !shouldShow) return;
+
+  if (!shouldShow) {
+    existing.remove();
+    updateCounts();
+    ensureCardsEmptyState();
+    return;
+  }
+
+  const tmp = document.createElement("div");
+  tmp.innerHTML = renderCard(row);
+  const nextCard = tmp.firstElementChild;
+  if (!nextCard) {
+    refreshUI();
+    return;
+  }
+  existing.replaceWith(nextCard);
+  updateCounts();
+}
+
 function activeFilteredRows() {
   if (!state.auth.user) return [];
   return sortRows(state.rows.filter((row) => matchesFilters(row)));
 }
 
+function countFilteredRows() {
+  if (!state.auth.user) return 0;
+  return state.rows.reduce((acc, row) => acc + (matchesFilters(row) ? 1 : 0), 0);
+}
+
 function updateCounts() {
   const countEl = document.getElementById("resultsCount");
-  const count = activeFilteredRows().length;
+  const count = countFilteredRows();
   countEl.textContent = `Filter preview: ${count} / ${state.rows.length} cards`;
 
   const meta = document.getElementById("metaInfo");
@@ -1224,25 +1279,39 @@ async function submitComment(form) {
     return;
   }
 
-  const { error } = await state.auth.client.from("tender_comments").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    comment_text: commentText,
-  });
+  const { data, error } = await state.auth.client.from("tender_comments")
+    .insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      comment_text: commentText,
+    })
+    .select("id,tender_key,user_id,user_email,comment_text,created_at,updated_at")
+    .single();
 
   if (error) throw error;
+  const existing = state.remote.commentsByKey.get(tenderKey) || [];
+  state.remote.commentsByKey.set(tenderKey, [...existing, data]);
   state.ui.openCommentForms.delete(tenderKey);
   form.reset();
   authMessage("Kommentar gespeichert.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  refreshSingleCardByTenderKey(tenderKey);
 }
 
 async function deleteComment(commentId, tenderKey) {
   const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
   if (error) throw error;
+
+  const key = tenderKey || "";
+  if (key) {
+    const existing = state.remote.commentsByKey.get(key) || [];
+    const next = existing.filter((entry) => normalize(entry.id) !== commentId);
+    if (next.length) state.remote.commentsByKey.set(key, next);
+    else state.remote.commentsByKey.delete(key);
+  }
+
   authMessage("Kommentar geloescht.");
-  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  if (key) refreshSingleCardByTenderKey(key);
   else await loadRemoteData();
 }
 
