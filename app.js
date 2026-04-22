@@ -1131,6 +1131,34 @@ function mapByTenderKey(rows) {
   return out;
 }
 
+async function ensureSessionReady() {
+  if (!state.auth.enabled || !state.auth.client) throw new Error("Supabase nicht konfiguriert.");
+  const { data, error } = await state.auth.client.auth.getSession();
+  if (error) throw error;
+  if (!data.session) {
+    state.auth.user = null;
+    updateAuthStatus();
+    throw new Error("Session abgelaufen. Bitte erneut anmelden.");
+  }
+
+  const expiresAtMs = data.session.expires_at ? Number(data.session.expires_at) * 1000 : 0;
+  const needsRefresh = !!expiresAtMs && (expiresAtMs - Date.now() < 60 * 1000);
+  if (!needsRefresh) {
+    state.auth.user = data.session.user;
+    return;
+  }
+
+  const { data: refreshed, error: refreshError } = await state.auth.client.auth.refreshSession();
+  if (refreshError || !refreshed.session) {
+    state.auth.user = null;
+    updateAuthStatus();
+    throw new Error(refreshError?.message || "Session-Refresh fehlgeschlagen. Bitte erneut anmelden.");
+  }
+
+  state.auth.user = refreshed.session.user;
+  updateAuthStatus();
+}
+
 function mergeByTenderKeys(existingMap, replacementMap, tenderKeys) {
   const merged = new Map(existingMap);
   tenderKeys.forEach((key) => {
@@ -1266,6 +1294,7 @@ async function submitComment(form) {
     authMessage("Bitte zuerst anmelden.", true);
     return;
   }
+  await ensureSessionReady();
 
   const tenderKey = normalize(form.getAttribute("data-tender-key"));
   const fd = new FormData(form);
@@ -1295,6 +1324,7 @@ async function submitComment(form) {
 }
 
 async function deleteComment(commentId, tenderKey) {
+  await ensureSessionReady();
   const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
   if (error) throw error;
 
@@ -1316,6 +1346,7 @@ async function submitOverride(form) {
     authMessage("Bitte zuerst anmelden.", true);
     return;
   }
+  await ensureSessionReady();
 
   const tenderKey = normalize(form.getAttribute("data-tender-key"));
   const fd = new FormData(form);
@@ -1343,6 +1374,7 @@ async function submitOverride(form) {
 }
 
 async function deleteOverride(overrideId, tenderKey) {
+  await ensureSessionReady();
   const { error } = await state.auth.client.from("tender_score_overrides").delete().eq("id", overrideId);
   if (error) throw error;
   authMessage("Override geloescht.");
@@ -1355,6 +1387,7 @@ async function toggleVerification(tenderKey) {
     authMessage("Bitte zuerst anmelden.", true);
     return;
   }
+  await ensureSessionReady();
   const currentlyVerified = isVerified(tenderKey);
   const { error } = await state.auth.client.from("tender_verifications").insert({
     tender_key: tenderKey,
@@ -1372,6 +1405,7 @@ async function toggleApprovalRequest(tenderKey) {
     authMessage("Bitte zuerst anmelden.", true);
     return;
   }
+  await ensureSessionReady();
 
   const latest = getLatestApprovalRequest(tenderKey);
   const isOpen = !!(latest && normalize(latest.status).toLowerCase() === "open");
@@ -1405,6 +1439,7 @@ async function submitFieldEdit(form) {
     authMessage("Bitte zuerst anmelden.", true);
     return;
   }
+  await ensureSessionReady();
 
   const tenderKey = normalize(form.getAttribute("data-tender-key"));
   if (!tenderKey) return;
@@ -1428,6 +1463,7 @@ async function submitFieldEdit(form) {
 }
 
 async function deleteFieldEdit(fieldEditId, tenderKey) {
+  await ensureSessionReady();
   const { error } = await state.auth.client.from("tender_field_edits").delete().eq("id", fieldEditId);
   if (error) throw error;
   authMessage("Feldkorrektur geloescht.");
@@ -1806,6 +1842,17 @@ async function initAuthFlow() {
     state.auth.user = session ? session.user : null;
     updateAuthStatus();
     await loadRemoteData();
+  });
+
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible") return;
+    if (!state.auth.enabled) return;
+    try {
+      await ensureSessionReady();
+      await loadRemoteData();
+    } catch (err) {
+      authMessage(`Session-Check fehlgeschlagen: ${err.message || err}`, true);
+    }
   });
 }
 
