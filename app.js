@@ -97,8 +97,10 @@ function authMessage(text, isError = false) {
 function applyAuthPanelVisibility() {
   const panel = document.getElementById("authPanel");
   const toggleBtn = document.getElementById("authToggleBtn");
-  if (!panel || !toggleBtn) return;
+  const body = document.body;
+  if (!panel || !toggleBtn || !body) return;
   panel.classList.toggle("collapsed", state.ui.authCollapsed);
+  body.classList.toggle("auth-collapsed", state.ui.authCollapsed);
   toggleBtn.textContent = state.ui.authCollapsed ? "Einblenden" : "Ausblenden";
 }
 
@@ -507,9 +509,12 @@ function updateFilterCountBadges() {
 }
 
 function renderComments(project) {
+  if (!state.auth.user) return "";
+
   const comments = state.remote.commentsByKey.get(project._tenderKey) || [];
   const myUserId = state.auth.user ? state.auth.user.id : "";
   const isFormOpen = state.ui.openCommentForms.has(project._tenderKey);
+  const hasComments = comments.length > 0;
 
   const listHtml = comments.length
     ? comments.map((comment) => {
@@ -525,23 +530,27 @@ function renderComments(project) {
         </li>
       `;
     }).join("\n")
-    : '<p class="muted">Noch keine Kommentare vorhanden.</p>';
-
-  const formHtml = state.auth.user
-    ? (isFormOpen
-      ? `
-        <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
-          <label>Kommentar</label>
-          <textarea name="comment_text" required maxlength="2000"></textarea>
-          <button class="action-btn" type="submit">Kommentar speichern</button>
-        </form>
-      `
-      : "")
-    : '<p class="muted">Zum Kommentieren bitte anmelden.</p>';
-
-  const controlsHtml = state.auth.user
-    ? `<div class="section-toolbar"><button class="action-btn comment-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button></div>`
     : "";
+
+  const formHtml = isFormOpen
+    ? `
+      <form class="comment-form" data-tender-key="${esc(project._tenderKey)}">
+        <label>Kommentar</label>
+        <textarea name="comment_text" required maxlength="2000"></textarea>
+        <button class="action-btn" type="submit">Kommentar speichern</button>
+      </form>
+    `
+    : "";
+
+  const controlsHtml = `<div class="section-toolbar"><button class="action-btn comment-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button></div>`;
+
+  if (!hasComments && !isFormOpen) {
+    return `
+      <section class="card-section compact">
+        ${controlsHtml}
+      </section>
+    `;
+  }
 
   return `
     <section class="card-section">
@@ -554,9 +563,12 @@ function renderComments(project) {
 }
 
 function renderOverrides(project) {
+  if (!state.auth.user) return "";
+
   const history = getOverrideHistory(project._tenderKey);
   const latest = getLatestOverride(project._tenderKey);
   const isFormOpen = state.ui.openOverrideForms.has(project._tenderKey);
+  const hasOverrides = history.length > 0;
 
   const historyHtml = history.length
     ? history.slice().reverse().map((entry, idx) => {
@@ -574,29 +586,33 @@ function renderOverrides(project) {
         </li>
       `;
     }).join("\n")
-    : '<p class="muted">Noch keine Overrides vorhanden.</p>';
-
-  const formHtml = state.auth.user
-    ? (isFormOpen
-      ? `
-        <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
-          <label>Neuer globaler Relevanzwert (1-10)</label>
-          <input name="score_value" type="number" min="1" max="10" step="1" required>
-          <label>Begruendung (optional)</label>
-          <textarea name="reason_text" maxlength="2000"></textarea>
-          <button class="action-btn" type="submit">Override speichern</button>
-        </form>
-      `
-      : "")
-    : '<p class="muted">Zum Ueberschreiben bitte anmelden.</p>';
-
-  const controlsHtml = state.auth.user
-    ? `<div class="section-toolbar"><button class="action-btn override-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Override-Feld ausblenden" : "Override score"}</button></div>`
     : "";
+
+  const formHtml = isFormOpen
+    ? `
+      <form class="override-form" data-tender-key="${esc(project._tenderKey)}">
+        <label>Neuer globaler Relevanzwert (1-10)</label>
+        <input name="score_value" type="number" min="1" max="10" step="1" required>
+        <label>Begruendung (optional)</label>
+        <textarea name="reason_text" maxlength="2000"></textarea>
+        <button class="action-btn" type="submit">Override speichern</button>
+      </form>
+    `
+    : "";
+
+  const controlsHtml = `<div class="section-toolbar"><button class="action-btn override-toggle" type="button" data-tender-key="${esc(project._tenderKey)}">${isFormOpen ? "Override-Feld ausblenden" : "Override score"}</button></div>`;
 
   const scoreState = latest
     ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(project.relevanzbewertung) || "-")})</p>`
     : `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (AI-Original)</p>`;
+
+  if (!hasOverrides && !isFormOpen) {
+    return `
+      <section class="card-section compact">
+        ${controlsHtml}
+      </section>
+    `;
+  }
 
   return `
     <section class="card-section">
