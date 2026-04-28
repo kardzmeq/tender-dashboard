@@ -496,6 +496,39 @@ body:not(.dashboard-locked) .auth-gate {
   color: #fff;
 }
 
+.seen-corner-btn {
+  border: 1px solid #0f766e;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.84rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.35);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.seen-inline-btn {
+  margin-left: auto;
+}
+
+.seen-corner-btn:hover {
+  filter: brightness(1.04);
+}
+
+.seen-corner-btn:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.35);
+}
+
+.seen-corner-btn.active {
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  border-color: #0f172a;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.35);
+}
+
 .comment-item,
 .override-item {
   list-style: none;
@@ -621,6 +654,10 @@ body:not(.dashboard-locked) .auth-gate {
 
   .score-pill {
     width: fit-content;
+  }
+
+  .seen-inline-btn {
+    margin-left: 0;
   }
 }
 

@@ -923,10 +923,12 @@ function renderCardActions(project) {
       <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
       <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
       <button class="action-btn field-edit-toggle ${isFieldEditOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isFieldEditOpen ? "Edit fields ausblenden" : "Edit card fields"}</button>
-      <button class="action-btn seen-toggle ${seenByMe ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${seenByMe ? "Seen (undo)" : "Seen"}</button>
       <button class="action-btn verify-toggle ${verified ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquistions team</button>
       <button class="action-btn akq-list-toggle ${inAkqList ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Already in Akquisions List</button>
       <button class="action-btn request-approval-toggle ${hasOpenRequest ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}" ${hasOpenRequest && !canResolveRequest ? "disabled" : ""}>${requestLabel}</button>
+      <button class="seen-corner-btn seen-inline-btn seen-toggle ${seenByMe ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">
+        ${seenByMe ? "Seen" : "Mark as Seen"}
+      </button>
     </div>
   `;
 }
@@ -1531,6 +1533,23 @@ async function toggleSeen(tenderKey) {
   await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
+async function markSeenIfNeeded(tenderKey) {
+  if (!state.auth.user || !tenderKey) return;
+  if (isSeenByCurrentUser(tenderKey)) return;
+  await ensureSessionReady();
+  const { error } = await state.auth.client.from("tender_seen").insert({
+    tender_key: tenderKey,
+    user_id: state.auth.user.id,
+    user_email: state.auth.user.email,
+  });
+  if (error) {
+    // Unique conflict means another action already marked it seen.
+    if (error.code === "23505") return;
+    throw error;
+  }
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+}
+
 async function toggleApprovalRequest(tenderKey) {
   if (!state.auth.user) {
     authMessage("Bitte zuerst anmelden.", true);
@@ -1751,6 +1770,22 @@ function bindUi() {
   document.getElementById("cardsPool").addEventListener("click", async (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
+    const clickedButton = target.closest("button");
+    const card = target.closest("article.project");
+    const cardTenderKey = card ? normalize(card.getAttribute("data-tender-key")) : "";
+
+    if (
+      clickedButton
+      && cardTenderKey
+      && state.auth.user
+      && !clickedButton.classList.contains("seen-toggle")
+    ) {
+      try {
+        await markSeenIfNeeded(cardTenderKey);
+      } catch (err) {
+        authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
+      }
+    }
 
     if (target.classList.contains("comment-toggle")) {
       const tenderKey = normalize(target.getAttribute("data-tender-key"));
