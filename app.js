@@ -64,6 +64,8 @@ const state = {
     enabled: false,
     client: null,
     user: null,
+    resumeSyncPromise: null,
+    hasShownResumeTransientHint: false,
   },
   remote: {
     commentsByKey: new Map(),
@@ -706,7 +708,7 @@ function renderComments(project) {
             <span>${esc(formatDateTime(comment.created_at))}</span>
           </div>
           <p>${esc(comment.comment_text).replace(/\n/g, "<br>")}</p>
-          ${canDelete ? `<button class="action-btn comment-delete" type="button" data-comment-id="${esc(comment.id)}" data-tender-key="${esc(project._tenderKey)}">Kommentar loeschen</button>` : ""}
+          ${canDelete ? `<button class="action-btn comment-delete" type="button" data-action="delete-comment" data-comment-id="${esc(comment.id)}" data-tender-key="${esc(project._tenderKey)}">Kommentar loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -757,7 +759,7 @@ function renderOverrides(project) {
           <p><strong>Score:</strong> ${esc(entry.score_value)}</p>
           <p><strong>Begruendung:</strong> ${esc(reason).replace(/\n/g, "<br>")}</p>
           ${isLatest ? '<span class="latest-badge">Aktiver Override</span>' : ""}
-          ${entry.user_id === myUserId ? `<button class="action-btn override-delete" type="button" data-override-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Override loeschen</button>` : ""}
+          ${entry.user_id === myUserId ? `<button class="action-btn override-delete" type="button" data-action="delete-override" data-override-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Override loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -856,7 +858,7 @@ function renderFieldEdits(project) {
             <span>${esc(formatDateTime(entry.created_at))}</span>
           </div>
           <p>${isLatest ? "<strong>Aktive Feldkorrektur</strong>" : "Fruehere Feldkorrektur"}</p>
-          ${entry.user_id === myUserId ? `<button class="action-btn field-edit-delete" type="button" data-field-edit-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Korrektur loeschen</button>` : ""}
+          ${entry.user_id === myUserId ? `<button class="action-btn field-edit-delete" type="button" data-action="delete-field-edit" data-field-edit-id="${esc(entry.id)}" data-tender-key="${esc(project._tenderKey)}">Korrektur loeschen</button>` : ""}
         </li>
       `;
     }).join("\n")
@@ -920,13 +922,13 @@ function renderCardActions(project) {
 
   return `
     <div class="card-actions">
-      <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
-      <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
-      <button class="action-btn field-edit-toggle ${isFieldEditOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isFieldEditOpen ? "Edit fields ausblenden" : "Edit card fields"}</button>
-      <button class="action-btn verify-toggle ${verified ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquistions team</button>
-      <button class="action-btn akq-list-toggle ${inAkqList ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Already in Akquisions List</button>
-      <button class="action-btn request-approval-toggle ${hasOpenRequest ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}" ${hasOpenRequest && !canResolveRequest ? "disabled" : ""}>${requestLabel}</button>
-      <button class="seen-corner-btn seen-inline-btn seen-toggle ${seenByMe ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">
+      <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-action="toggle-comment" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
+      <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-action="toggle-override" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
+      <button class="action-btn field-edit-toggle ${isFieldEditOpen ? "active" : ""}" type="button" data-action="toggle-field-edit" data-tender-key="${esc(project._tenderKey)}">${isFieldEditOpen ? "Edit fields ausblenden" : "Edit card fields"}</button>
+      <button class="action-btn verify-toggle ${verified ? "active" : ""}" type="button" data-action="toggle-verify" data-tender-key="${esc(project._tenderKey)}">Verified by Akquistions team</button>
+      <button class="action-btn akq-list-toggle ${inAkqList ? "active" : ""}" type="button" data-action="toggle-akq-list" data-tender-key="${esc(project._tenderKey)}">Already in Akquisions List</button>
+      <button class="action-btn request-approval-toggle ${hasOpenRequest ? "active" : ""}" type="button" data-action="toggle-approval-request" data-tender-key="${esc(project._tenderKey)}" ${hasOpenRequest && !canResolveRequest ? "disabled" : ""}>${requestLabel}</button>
+      <button class="seen-corner-btn seen-inline-btn seen-toggle ${seenByMe ? "active" : ""}" type="button" data-action="toggle-seen" data-tender-key="${esc(project._tenderKey)}">
         ${seenByMe ? "Seen" : "Mark as Seen"}
       </button>
     </div>
@@ -1210,32 +1212,93 @@ function mapByTenderKey(rows) {
   return out;
 }
 
+function buildSessionError(message, { isAuthExpired = false, isTransient = false } = {}) {
+  const err = new Error(message);
+  err.isAuthExpired = isAuthExpired;
+  err.isTransient = isTransient;
+  return err;
+}
+
+function isLikelyTransientAuthError(err) {
+  const msg = normalize(err && err.message).toLowerCase();
+  const code = normalize(err && err.code).toLowerCase();
+  const status = Number(err && err.status);
+  if (status === 0 || status === 408 || status === 429 || (status >= 500 && status < 600)) return true;
+  if (["ecconnreset", "etimedout", "econnrefused", "network_error", "networkerror"].includes(code)) return true;
+  return (
+    msg.includes("network")
+    || msg.includes("fetch")
+    || msg.includes("timeout")
+    || msg.includes("offline")
+    || msg.includes("failed to fetch")
+  );
+}
+
+function expireSessionUi(message = "Session expired, please log in again.") {
+  state.auth.user = null;
+  updateAuthStatus();
+  refreshUI();
+  authMessage(message, true);
+  loadRemoteData().catch(() => {});
+}
+
 async function ensureSessionReady() {
-  if (!state.auth.enabled || !state.auth.client) throw new Error("Supabase nicht konfiguriert.");
+  if (!state.auth.enabled || !state.auth.client) {
+    throw buildSessionError("Supabase nicht konfiguriert.", { isAuthExpired: true });
+  }
+
   const { data, error } = await state.auth.client.auth.getSession();
-  if (error) throw error;
+  if (error) {
+    if (isLikelyTransientAuthError(error)) {
+      throw buildSessionError(error.message || "Session-Check fehlgeschlagen.", { isTransient: true });
+    }
+    throw buildSessionError(error.message || "Session konnte nicht geladen werden.", { isAuthExpired: true });
+  }
+
   if (!data.session) {
-    state.auth.user = null;
-    updateAuthStatus();
-    throw new Error("Session abgelaufen. Bitte erneut anmelden.");
+    throw buildSessionError("Session expired, please log in again.", { isAuthExpired: true });
   }
 
   const expiresAtMs = data.session.expires_at ? Number(data.session.expires_at) * 1000 : 0;
   const needsRefresh = !!expiresAtMs && (expiresAtMs - Date.now() < 60 * 1000);
   if (!needsRefresh) {
     state.auth.user = data.session.user;
+    updateAuthStatus();
     return;
   }
 
   const { data: refreshed, error: refreshError } = await state.auth.client.auth.refreshSession();
   if (refreshError || !refreshed.session) {
-    state.auth.user = null;
-    updateAuthStatus();
-    throw new Error(refreshError?.message || "Session-Refresh fehlgeschlagen. Bitte erneut anmelden.");
+    if (refreshError && isLikelyTransientAuthError(refreshError)) {
+      throw buildSessionError(refreshError.message || "Session-Refresh fehlgeschlagen.", { isTransient: true });
+    }
+    throw buildSessionError(
+      refreshError?.message || "Session expired, please log in again.",
+      { isAuthExpired: true }
+    );
   }
 
   state.auth.user = refreshed.session.user;
   updateAuthStatus();
+}
+
+async function withSession(task) {
+  if (!state.auth.user) {
+    expireSessionUi();
+    return null;
+  }
+
+  try {
+    await ensureSessionReady();
+  } catch (err) {
+    if (err && err.isAuthExpired) {
+      expireSessionUi(err.message || "Session expired, please log in again.");
+      return null;
+    }
+    throw err;
+  }
+
+  return task();
 }
 
 function mergeByTenderKeys(existingMap, replacementMap, tenderKeys) {
@@ -1381,244 +1444,228 @@ async function loadRemoteData() {
 }
 
 async function submitComment(form) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
+  await withSession(async () => {
+    const tenderKey = normalize(form.getAttribute("data-tender-key"));
+    const fd = new FormData(form);
+    const commentText = normalize(fd.get("comment_text"));
+    if (!tenderKey || !commentText) {
+      authMessage("Kommentar darf nicht leer sein.", true);
+      return;
+    }
 
-  const tenderKey = normalize(form.getAttribute("data-tender-key"));
-  const fd = new FormData(form);
-  const commentText = normalize(fd.get("comment_text"));
-  if (!tenderKey || !commentText) {
-    authMessage("Kommentar darf nicht leer sein.", true);
-    return;
-  }
+    const { data, error } = await state.auth.client.from("tender_comments")
+      .insert({
+        tender_key: tenderKey,
+        user_id: state.auth.user.id,
+        user_email: state.auth.user.email,
+        comment_text: commentText,
+      })
+      .select("id,tender_key,user_id,user_email,comment_text,created_at,updated_at")
+      .single();
 
-  const { data, error } = await state.auth.client.from("tender_comments")
-    .insert({
-      tender_key: tenderKey,
-      user_id: state.auth.user.id,
-      user_email: state.auth.user.email,
-      comment_text: commentText,
-    })
-    .select("id,tender_key,user_id,user_email,comment_text,created_at,updated_at")
-    .single();
-
-  if (error) throw error;
-  const existing = state.remote.commentsByKey.get(tenderKey) || [];
-  state.remote.commentsByKey.set(tenderKey, [...existing, data]);
-  state.ui.openCommentForms.delete(tenderKey);
-  form.reset();
-  authMessage("Kommentar gespeichert.");
-  refreshSingleCardByTenderKey(tenderKey);
+    if (error) throw error;
+    const existing = state.remote.commentsByKey.get(tenderKey) || [];
+    state.remote.commentsByKey.set(tenderKey, [...existing, data]);
+    state.ui.openCommentForms.delete(tenderKey);
+    form.reset();
+    authMessage("Kommentar gespeichert.");
+    refreshSingleCardByTenderKey(tenderKey);
+  });
 }
 
 async function deleteComment(commentId, tenderKey) {
-  await ensureSessionReady();
-  const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
-  if (error) throw error;
+  await withSession(async () => {
+    const { error } = await state.auth.client.from("tender_comments").delete().eq("id", commentId);
+    if (error) throw error;
 
-  const key = tenderKey || "";
-  if (key) {
-    const existing = state.remote.commentsByKey.get(key) || [];
-    const next = existing.filter((entry) => normalize(entry.id) !== commentId);
-    if (next.length) state.remote.commentsByKey.set(key, next);
-    else state.remote.commentsByKey.delete(key);
-  }
+    const key = tenderKey || "";
+    if (key) {
+      const existing = state.remote.commentsByKey.get(key) || [];
+      const next = existing.filter((entry) => normalize(entry.id) !== commentId);
+      if (next.length) state.remote.commentsByKey.set(key, next);
+      else state.remote.commentsByKey.delete(key);
+    }
 
-  authMessage("Kommentar geloescht.");
-  if (key) refreshSingleCardByTenderKey(key);
-  else await loadRemoteData();
+    authMessage("Kommentar geloescht.");
+    if (key) refreshSingleCardByTenderKey(key);
+    else await loadRemoteData();
+  });
 }
 
 async function submitOverride(form) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
+  await withSession(async () => {
+    const tenderKey = normalize(form.getAttribute("data-tender-key"));
+    const fd = new FormData(form);
+    const scoreValueRaw = normalize(fd.get("score_value"));
+    const reasonText = normalize(fd.get("reason_text"));
+    const scoreValue = Number(scoreValueRaw);
+    if (!tenderKey || !Number.isInteger(scoreValue) || scoreValue < 1 || scoreValue > 10) {
+      authMessage("Score muss zwischen 1 und 10 liegen.", true);
+      return;
+    }
 
-  const tenderKey = normalize(form.getAttribute("data-tender-key"));
-  const fd = new FormData(form);
-  const scoreValueRaw = normalize(fd.get("score_value"));
-  const reasonText = normalize(fd.get("reason_text"));
-  const scoreValue = Number(scoreValueRaw);
-  if (!tenderKey || !Number.isInteger(scoreValue) || scoreValue < 1 || scoreValue > 10) {
-    authMessage("Score muss zwischen 1 und 10 liegen.", true);
-    return;
-  }
+    const { error } = await state.auth.client.from("tender_score_overrides").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      score_value: scoreValue,
+      reason_text: reasonText || null,
+    });
 
-  const { error } = await state.auth.client.from("tender_score_overrides").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    score_value: scoreValue,
-    reason_text: reasonText || null,
+    if (error) throw error;
+    state.ui.openOverrideForms.delete(tenderKey);
+    form.reset();
+    authMessage("Override gespeichert.");
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
   });
-
-  if (error) throw error;
-  state.ui.openOverrideForms.delete(tenderKey);
-  form.reset();
-  authMessage("Override gespeichert.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function deleteOverride(overrideId, tenderKey) {
-  await ensureSessionReady();
-  const { error } = await state.auth.client.from("tender_score_overrides").delete().eq("id", overrideId);
-  if (error) throw error;
-  authMessage("Override geloescht.");
-  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
-  else await loadRemoteData();
+  await withSession(async () => {
+    const { error } = await state.auth.client.from("tender_score_overrides").delete().eq("id", overrideId);
+    if (error) throw error;
+    authMessage("Override geloescht.");
+    if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+    else await loadRemoteData();
+  });
 }
 
 async function toggleVerification(tenderKey) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
-  const currentlyVerified = isVerified(tenderKey);
-  const { error } = await state.auth.client.from("tender_verifications").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    is_verified: !currentlyVerified,
+  await withSession(async () => {
+    const currentlyVerified = isVerified(tenderKey);
+    const { error } = await state.auth.client.from("tender_verifications").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      is_verified: !currentlyVerified,
+    });
+    if (error) throw error;
+    authMessage(!currentlyVerified ? "Karte verifiziert." : "Verifizierung entfernt.");
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
   });
-  if (error) throw error;
-  authMessage(!currentlyVerified ? "Karte verifiziert." : "Verifizierung entfernt.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function toggleAkqList(tenderKey) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
-  const currentlyInList = isAlreadyInAkqList(tenderKey);
-  const { error } = await state.auth.client.from("tender_akq_list_flags").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    is_in_list: !currentlyInList,
+  await withSession(async () => {
+    const currentlyInList = isAlreadyInAkqList(tenderKey);
+    const { error } = await state.auth.client.from("tender_akq_list_flags").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      is_in_list: !currentlyInList,
+    });
+    if (error) throw error;
+    authMessage(!currentlyInList ? "Als bereits in Akquisitionsliste markiert." : "Markierung entfernt.");
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
   });
-  if (error) throw error;
-  authMessage(!currentlyInList ? "Als bereits in Akquisitionsliste markiert." : "Markierung entfernt.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function toggleSeen(tenderKey) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
+  await withSession(async () => {
+    const existing = getSeenHistory(tenderKey).find((entry) => entry.user_id === state.auth.user.id);
+    if (existing) {
+      const { error } = await state.auth.client.from("tender_seen").delete().eq("id", existing.id);
+      if (error) throw error;
+      authMessage("Als ungesehen markiert.");
+    } else {
+      const { error } = await state.auth.client.from("tender_seen").insert({
+        tender_key: tenderKey,
+        user_id: state.auth.user.id,
+        user_email: state.auth.user.email,
+      });
+      if (error) throw error;
+      authMessage("Als gesehen markiert.");
+    }
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  });
+}
 
-  const existing = getSeenHistory(tenderKey).find((entry) => entry.user_id === state.auth.user.id);
-  if (existing) {
-    const { error } = await state.auth.client.from("tender_seen").delete().eq("id", existing.id);
-    if (error) throw error;
-    authMessage("Als ungesehen markiert.");
-  } else {
+async function markSeenIfNeeded(tenderKey) {
+  if (!tenderKey || isSeenByCurrentUser(tenderKey)) return;
+  await withSession(async () => {
     const { error } = await state.auth.client.from("tender_seen").insert({
       tender_key: tenderKey,
       user_id: state.auth.user.id,
       user_email: state.auth.user.email,
     });
-    if (error) throw error;
-    authMessage("Als gesehen markiert.");
-  }
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+    if (error) {
+      // Unique conflict means another action already marked it seen.
+      if (error.code === "23505") return;
+      throw error;
+    }
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+  });
 }
 
-async function markSeenIfNeeded(tenderKey) {
+function markSeenNonBlocking(tenderKey) {
   if (!state.auth.user || !tenderKey) return;
-  if (isSeenByCurrentUser(tenderKey)) return;
-  await ensureSessionReady();
-  const { error } = await state.auth.client.from("tender_seen").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
+  markSeenIfNeeded(tenderKey).catch((err) => {
+    authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
   });
-  if (error) {
-    // Unique conflict means another action already marked it seen.
-    if (error.code === "23505") return;
-    throw error;
-  }
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function toggleApprovalRequest(tenderKey) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
-
-  const latest = getLatestApprovalRequest(tenderKey);
-  const isOpen = !!(latest && normalize(latest.status).toLowerCase() === "open");
-  if (isOpen) {
-    if (latest.user_id !== state.auth.user.id) {
-      authMessage("Nur der Ersteller kann diese Anfrage schliessen.", true);
+  await withSession(async () => {
+    const latest = getLatestApprovalRequest(tenderKey);
+    const isOpen = !!(latest && normalize(latest.status).toLowerCase() === "open");
+    if (isOpen) {
+      if (latest.user_id !== state.auth.user.id) {
+        authMessage("Nur der Ersteller kann diese Anfrage schliessen.", true);
+        return;
+      }
+      const { error } = await state.auth.client.from("tender_approval_requests")
+        .update({ status: "resolved" })
+        .eq("id", latest.id);
+      if (error) throw error;
+      authMessage("AKQ-Anfrage geschlossen.");
+      await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
       return;
     }
-    const { error } = await state.auth.client.from("tender_approval_requests")
-      .update({ status: "resolved" })
-      .eq("id", latest.id);
-    if (error) throw error;
-    authMessage("AKQ-Anfrage geschlossen.");
-    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
-    return;
-  }
 
-  const { error } = await state.auth.client.from("tender_approval_requests").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    status: "open",
+    const { error } = await state.auth.client.from("tender_approval_requests").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      status: "open",
+    });
+    if (error) throw error;
+    authMessage("AKQ-Anfrage erstellt.");
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
   });
-  if (error) throw error;
-  authMessage("AKQ-Anfrage erstellt.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function submitFieldEdit(form) {
-  if (!state.auth.user) {
-    authMessage("Bitte zuerst anmelden.", true);
-    return;
-  }
-  await ensureSessionReady();
+  await withSession(async () => {
+    const tenderKey = normalize(form.getAttribute("data-tender-key"));
+    if (!tenderKey) return;
 
-  const tenderKey = normalize(form.getAttribute("data-tender-key"));
-  if (!tenderKey) return;
+    const fd = new FormData(form);
+    const payload = {};
+    for (const [key, value] of fd.entries()) {
+      payload[normalize(key)] = normalize(value);
+    }
 
-  const fd = new FormData(form);
-  const payload = {};
-  for (const [key, value] of fd.entries()) {
-    payload[normalize(key)] = normalize(value);
-  }
-
-  const { error } = await state.auth.client.from("tender_field_edits").insert({
-    tender_key: tenderKey,
-    user_id: state.auth.user.id,
-    user_email: state.auth.user.email,
-    edit_payload: payload,
+    const { error } = await state.auth.client.from("tender_field_edits").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+      edit_payload: payload,
+    });
+    if (error) throw error;
+    state.ui.openFieldEditForms.delete(tenderKey);
+    authMessage("Feldkorrektur gespeichert.");
+    await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
   });
-  if (error) throw error;
-  state.ui.openFieldEditForms.delete(tenderKey);
-  authMessage("Feldkorrektur gespeichert.");
-  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
 async function deleteFieldEdit(fieldEditId, tenderKey) {
-  await ensureSessionReady();
-  const { error } = await state.auth.client.from("tender_field_edits").delete().eq("id", fieldEditId);
-  if (error) throw error;
-  authMessage("Feldkorrektur geloescht.");
-  if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
-  else await loadRemoteData();
+  await withSession(async () => {
+    const { error } = await state.auth.client.from("tender_field_edits").delete().eq("id", fieldEditId);
+    if (error) throw error;
+    authMessage("Feldkorrektur geloescht.");
+    if (tenderKey) await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+    else await loadRemoteData();
+  });
 }
 
 function bindUi() {
@@ -1771,141 +1818,105 @@ function bindUi() {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const clickedButton = target.closest("button");
-    const card = target.closest("article.project");
+    if (!(clickedButton instanceof HTMLButtonElement)) return;
+    if (clickedButton.disabled) return;
+
+    const action = normalize(clickedButton.getAttribute("data-action"));
+    if (!action) return;
+
+    const card = clickedButton.closest("article.project");
     const cardTenderKey = card ? normalize(card.getAttribute("data-tender-key")) : "";
+    const tenderKey = normalize(clickedButton.getAttribute("data-tender-key")) || cardTenderKey;
+    let handled = true;
 
-    if (
-      clickedButton
-      && cardTenderKey
-      && state.auth.user
-      && !clickedButton.classList.contains("seen-toggle")
-    ) {
-      try {
-        await markSeenIfNeeded(cardTenderKey);
-      } catch (err) {
-        authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
-      }
-    }
-
-    if (target.classList.contains("comment-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    if (action === "toggle-comment") {
       if (!tenderKey) return;
       if (state.ui.openCommentForms.has(tenderKey)) state.ui.openCommentForms.delete(tenderKey);
       else state.ui.openCommentForms.add(tenderKey);
       refreshUI();
-      return;
-    }
-
-    if (target.classList.contains("override-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-override") {
       if (!tenderKey) return;
       if (state.ui.openOverrideForms.has(tenderKey)) state.ui.openOverrideForms.delete(tenderKey);
       else state.ui.openOverrideForms.add(tenderKey);
       refreshUI();
-      return;
-    }
-
-    if (target.classList.contains("field-edit-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-field-edit") {
       if (!tenderKey) return;
       if (state.ui.openFieldEditForms.has(tenderKey)) state.ui.openFieldEditForms.delete(tenderKey);
       else state.ui.openFieldEditForms.add(tenderKey);
       refreshUI();
-      return;
-    }
-
-    if (target.classList.contains("verify-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-verify") {
       if (!tenderKey) return;
-      await runWithButtonLock(target, "Speichert...", async () => {
+      await runWithButtonLock(clickedButton, "Speichert...", async () => {
         try {
           await toggleVerification(tenderKey);
         } catch (err) {
           authMessage(`Verifizierung konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
-      return;
-    }
-
-    if (target.classList.contains("seen-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-seen") {
       if (!tenderKey) return;
-      await runWithButtonLock(target, "Speichert...", async () => {
+      await runWithButtonLock(clickedButton, "Speichert...", async () => {
         try {
           await toggleSeen(tenderKey);
         } catch (err) {
           authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
-      return;
-    }
-
-    if (target.classList.contains("akq-list-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-akq-list") {
       if (!tenderKey) return;
-      await runWithButtonLock(target, "Speichert...", async () => {
+      await runWithButtonLock(clickedButton, "Speichert...", async () => {
         try {
           await toggleAkqList(tenderKey);
         } catch (err) {
           authMessage(`AKQ-Listenstatus konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
-      return;
-    }
-
-    if (target.classList.contains("request-approval-toggle")) {
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "toggle-approval-request") {
       if (!tenderKey) return;
-      await runWithButtonLock(target, "Speichert...", async () => {
+      await runWithButtonLock(clickedButton, "Speichert...", async () => {
         try {
           await toggleApprovalRequest(tenderKey);
         } catch (err) {
           authMessage(`AKQ-Anfrage konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
-      return;
-    }
-
-    if (target.classList.contains("override-delete")) {
-      const overrideId = normalize(target.getAttribute("data-override-id"));
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "delete-override") {
+      const overrideId = normalize(clickedButton.getAttribute("data-override-id"));
       if (!overrideId) return;
-      await runWithButtonLock(target, "Loescht...", async () => {
+      await runWithButtonLock(clickedButton, "Loescht...", async () => {
         try {
           await deleteOverride(overrideId, tenderKey);
         } catch (err) {
           authMessage(`Override konnte nicht geloescht werden: ${err.message || err}`, true);
         }
       });
-      return;
-    }
-
-    if (target.classList.contains("field-edit-delete")) {
-      const fieldEditId = normalize(target.getAttribute("data-field-edit-id"));
-      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+    } else if (action === "delete-field-edit") {
+      const fieldEditId = normalize(clickedButton.getAttribute("data-field-edit-id"));
       if (!fieldEditId) return;
-      await runWithButtonLock(target, "Loescht...", async () => {
+      await runWithButtonLock(clickedButton, "Loescht...", async () => {
         try {
           await deleteFieldEdit(fieldEditId, tenderKey);
         } catch (err) {
           authMessage(`Feldkorrektur konnte nicht geloescht werden: ${err.message || err}`, true);
         }
       });
-      return;
+    } else if (action === "delete-comment") {
+      const commentId = normalize(clickedButton.getAttribute("data-comment-id"));
+      if (!commentId) return;
+      await runWithButtonLock(clickedButton, "Loescht...", async () => {
+        try {
+          await deleteComment(commentId, tenderKey);
+        } catch (err) {
+          authMessage(`Kommentar konnte nicht geloescht werden: ${err.message || err}`, true);
+        }
+      });
+    } else {
+      handled = false;
     }
 
-    if (!target.classList.contains("comment-delete")) return;
-
-    const commentId = normalize(target.getAttribute("data-comment-id"));
-    const tenderKey = normalize(target.getAttribute("data-tender-key"));
-    if (!commentId) return;
-    await runWithButtonLock(target, "Loescht...", async () => {
-      try {
-        await deleteComment(commentId, tenderKey);
-      } catch (err) {
-        authMessage(`Kommentar konnte nicht geloescht werden: ${err.message || err}`, true);
-      }
-    });
+    if (handled && action !== "toggle-seen") {
+      markSeenNonBlocking(tenderKey);
+    }
   });
 }
 
@@ -2023,6 +2034,41 @@ function bindAuthUi() {
   });
 }
 
+async function syncAuthOnResume() {
+  if (!state.auth.enabled || !state.auth.client) return;
+  if (state.auth.resumeSyncPromise) {
+    await state.auth.resumeSyncPromise;
+    return;
+  }
+
+  state.auth.resumeSyncPromise = (async () => {
+    try {
+      await ensureSessionReady();
+      state.auth.hasShownResumeTransientHint = false;
+      await loadRemoteData();
+    } catch (err) {
+      if (err && err.isAuthExpired) {
+        expireSessionUi(err.message || "Session expired, please log in again.");
+        return;
+      }
+
+      if (err && err.isTransient) {
+        if (!state.auth.hasShownResumeTransientHint) {
+          authMessage("Verbindung kurz unterbrochen. Bitte Tab erneut aktivieren oder Seite aktualisieren.", true);
+          state.auth.hasShownResumeTransientHint = true;
+        }
+        return;
+      }
+
+      authMessage(`Session-Check fehlgeschlagen: ${err.message || err}`, true);
+    } finally {
+      state.auth.resumeSyncPromise = null;
+    }
+  })();
+
+  await state.auth.resumeSyncPromise;
+}
+
 async function initAuthFlow() {
   initializeSupabaseClient();
   bindAuthUi();
@@ -2041,19 +2087,20 @@ async function initAuthFlow() {
 
   state.auth.client.auth.onAuthStateChange(async (_event, session) => {
     state.auth.user = session ? session.user : null;
+    state.auth.hasShownResumeTransientHint = false;
     updateAuthStatus();
+    refreshUI();
     await loadRemoteData();
   });
 
   document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState !== "visible") return;
-    if (!state.auth.enabled) return;
-    try {
-      await ensureSessionReady();
-      await loadRemoteData();
-    } catch (err) {
-      authMessage(`Session-Check fehlgeschlagen: ${err.message || err}`, true);
-    }
+    await syncAuthOnResume();
+  });
+
+  window.addEventListener("focus", async () => {
+    if (document.visibilityState !== "visible") return;
+    await syncAuthOnResume();
   });
 }
 
