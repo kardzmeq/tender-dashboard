@@ -151,15 +151,6 @@ body:not(.dashboard-locked) .auth-gate {
   border-radius: 10px;
 }
 
-body.dashboard-locked #loadStatus,
-body.dashboard-locked #metaInfo,
-body.dashboard-locked #loadWarnings,
-body.dashboard-locked .toolbar,
-body.dashboard-locked #resultsCount,
-body.dashboard-locked #cardsPool {
-  display: none;
-}
-
 .search-row input {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -487,6 +478,21 @@ body.dashboard-locked #cardsPool {
 
 .status-badge.edited {
   background: #0f766e;
+  color: #fff;
+}
+
+.status-badge.akq-listed {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.status-badge.seen-by-me {
+  background: #334155;
+  color: #fff;
+}
+
+.status-badge.seen-count {
+  background: #0369a1;
   color: #fff;
 }
 

@@ -83,6 +83,30 @@ create table if not exists public.tender_verifications (
 create index if not exists tender_verifications_tender_key_idx on public.tender_verifications (tender_key);
 create index if not exists tender_verifications_created_at_idx on public.tender_verifications (created_at desc);
 
+create table if not exists public.tender_akq_list_flags (
+  id uuid primary key default gen_random_uuid(),
+  tender_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  is_in_list boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists tender_akq_list_flags_tender_key_idx on public.tender_akq_list_flags (tender_key);
+create index if not exists tender_akq_list_flags_created_at_idx on public.tender_akq_list_flags (created_at desc);
+
+create table if not exists public.tender_seen (
+  id uuid primary key default gen_random_uuid(),
+  tender_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  user_email text,
+  seen_at timestamptz not null default now(),
+  unique (tender_key, user_id)
+);
+
+create index if not exists tender_seen_tender_key_idx on public.tender_seen (tender_key);
+create index if not exists tender_seen_seen_at_idx on public.tender_seen (seen_at desc);
+
 create table if not exists public.tender_approval_requests (
   id uuid primary key default gen_random_uuid(),
   tender_key text not null,
@@ -127,6 +151,8 @@ alter table public.profiles enable row level security;
 alter table public.tender_comments enable row level security;
 alter table public.tender_score_overrides enable row level security;
 alter table public.tender_verifications enable row level security;
+alter table public.tender_akq_list_flags enable row level security;
+alter table public.tender_seen enable row level security;
 alter table public.tender_approval_requests enable row level security;
 alter table public.tender_field_edits enable row level security;
 
@@ -208,6 +234,41 @@ on public.tender_verifications
 for insert
 to authenticated
 with check (auth.uid() = user_id);
+
+drop policy if exists "akq_list_select_authenticated" on public.tender_akq_list_flags;
+create policy "akq_list_select_authenticated"
+on public.tender_akq_list_flags
+for select
+to authenticated
+using (true);
+
+drop policy if exists "akq_list_insert_authenticated" on public.tender_akq_list_flags;
+create policy "akq_list_insert_authenticated"
+on public.tender_akq_list_flags
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "seen_select_authenticated" on public.tender_seen;
+create policy "seen_select_authenticated"
+on public.tender_seen
+for select
+to authenticated
+using (true);
+
+drop policy if exists "seen_insert_authenticated" on public.tender_seen;
+create policy "seen_insert_authenticated"
+on public.tender_seen
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "seen_delete_own" on public.tender_seen;
+create policy "seen_delete_own"
+on public.tender_seen
+for delete
+to authenticated
+using (auth.uid() = user_id);
 
 drop policy if exists "approval_requests_select_authenticated" on public.tender_approval_requests;
 create policy "approval_requests_select_authenticated"

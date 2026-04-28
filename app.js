@@ -27,18 +27,18 @@ const LOCATION_KEYWORDS = {
 };
 
 const REGION_KEYWORDS = {
-  britanien: ["scotland", "wales", "northern ireland", "irland", "ireland"],
+  britanien: ["scotland", "wales", "northern ireland", "irland", "ireland", "england", "united kingdom", "vereinigtes königreich", "vereinigtes koenigreich", "uk"],
   region_nordics_baltics: [
-    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "daenemark", "denmark", "Dänemark",
+    "norwegen", "norway", "schweden", "sweden", "finnland", "finland", "daenemark", "dänemark", "denmark", "Dänemark",
     "lettland", "latvia", "litauen", "lithuania", "estland", "estonia",
   ],
   region_eastern_balkans: [
     "polen", "poland", "ungarn", "hungary", "slowakei", "slovakia", "tschechien", "czech", "czech republic",
-    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "romania", "Rumänien",
+    "slowenien", "slovenia", "kroatien", "croatia", "serbien", "serbia", "rumaenien", "rumänien", "romania", "Rumänien",
     "bulgarien", "bulgaria", "moldau", "moldova", "griechenland", "thessaloniki",
   ],
   region_central_europe: [
-    "deutschland", "germany", "oesterreich", "austria", "schweiz", "switzerland", "frankreich", "france",
+    "deutschland", "germany", "oesterreich", "österreich", "austria", "schweiz", "switzerland", "frankreich", "france",
     "belgien", "belgium", "niederlande", "netherlands", "luxemburg", "luxembourg",
   ],
   region_southern_europe: ["spanien", "spain", "portugal", "italien", "italy", "zypern", "cyprus"],
@@ -57,6 +57,7 @@ const state = {
     onlyVerified: false,
     onlyWithActivity: false,
     onlyWithOpenRequest: false,
+    onlyUnseen: false,
     sortOrder: "score_desc",
   },
   auth: {
@@ -68,6 +69,8 @@ const state = {
     commentsByKey: new Map(),
     overridesByKey: new Map(),
     verificationsByKey: new Map(),
+    akqListByKey: new Map(),
+    seenByKey: new Map(),
     approvalRequestsByKey: new Map(),
     fieldEditsByKey: new Map(),
     loadRequestId: 0,
@@ -85,6 +88,13 @@ const state = {
 function normalize(v) {
   if (v === undefined || v === null) return "";
   return String(v).trim();
+}
+
+function normalizeKeywordText(value) {
+  return normalize(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function esc(v) {
@@ -324,14 +334,14 @@ function sourceLabel(sourceType) {
 }
 
 function buildLocationTags(location) {
-  const raw = normalize(location).toLowerCase();
+  const raw = normalizeKeywordText(location);
   if (!raw || raw === "-") return new Set(["global_rest"]);
 
   const tags = new Set();
   LOCATION_FILTERS.forEach(([, value]) => {
     if (value === "global_rest") return;
     const keywords = REGION_KEYWORDS[value] || LOCATION_KEYWORDS[value] || [value];
-    if (keywords.some((kw) => raw.includes(kw))) tags.add(value);
+    if (keywords.some((kw) => raw.includes(normalizeKeywordText(kw)))) tags.add(value);
   });
 
   if (!tags.size) tags.add("global_rest");
@@ -449,6 +459,42 @@ function getLatestApprovalRequest(tenderKey) {
 function hasOpenApprovalRequest(tenderKey) {
   const latest = getLatestApprovalRequest(tenderKey);
   return !!(latest && normalize(latest.status).toLowerCase() === "open");
+}
+
+function getSeenHistory(tenderKey) {
+  return state.remote.seenByKey.get(tenderKey) || [];
+}
+
+function isSeenByCurrentUser(tenderKey) {
+  if (!state.auth.user) return false;
+  return getSeenHistory(tenderKey).some((entry) => entry.user_id === state.auth.user.id);
+}
+
+function getSeenCount(tenderKey) {
+  return getSeenHistory(tenderKey).length;
+}
+
+function getSeenUsersTooltip(tenderKey) {
+  const users = getSeenHistory(tenderKey)
+    .map((entry) => normalize(entry.user_email))
+    .filter(Boolean);
+  if (!users.length) return "";
+  return users.join(", ");
+}
+
+function getAkqListHistory(tenderKey) {
+  return state.remote.akqListByKey.get(tenderKey) || [];
+}
+
+function getLatestAkqListFlag(tenderKey) {
+  const history = getAkqListHistory(tenderKey);
+  if (!history.length) return null;
+  return history[history.length - 1];
+}
+
+function isAlreadyInAkqList(tenderKey) {
+  const latest = getLatestAkqListFlag(tenderKey);
+  return !!(latest && latest.is_in_list);
 }
 
 function getFieldEditHistory(tenderKey) {
@@ -582,6 +628,7 @@ function matchesFilters(row, override = null) {
     onlyVerified: state.filters.onlyVerified,
     onlyWithActivity: state.filters.onlyWithActivity,
     onlyWithOpenRequest: state.filters.onlyWithOpenRequest,
+    onlyUnseen: state.filters.onlyUnseen,
   };
   const f = { ...base, ...(override || {}) };
 
@@ -598,7 +645,8 @@ function matchesFilters(row, override = null) {
     || hasFieldEdits(row._tenderKey)
   );
   const openRequestMatch = !f.onlyWithOpenRequest || hasOpenApprovalRequest(row._tenderKey);
-  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch && verifiedMatch && activityMatch && openRequestMatch;
+  const unseenMatch = !f.onlyUnseen || !state.auth.user || !isSeenByCurrentUser(row._tenderKey);
+  return typeMatch && locMatch && catMatch && scoreMatch && searchMatch && dateMatch && verifiedMatch && activityMatch && openRequestMatch && unseenMatch;
 }
 
 function computeVisibleCount(override = null) {
@@ -763,7 +811,22 @@ function editableFieldKeys(project) {
     "_costValue",
     "_effectiveData",
   ]);
-  return Object.keys(project).filter((key) => !blocked.has(key) && !key.startsWith("_")).sort();
+  const blockedLabels = new Set([
+    "agent2 error",
+    "agent2 raw",
+    "agent 1",
+    "relevancy explanation",
+    "agent 1 relevancy score",
+    "input tokens",
+    "model used",
+    "output tokens",
+    "total tokens",
+  ]);
+  const canonical = (value) => normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return Object.keys(project)
+    .filter((key) => !blocked.has(key) && !key.startsWith("_"))
+    .filter((key) => !blockedLabels.has(canonical(key)))
+    .sort();
 }
 
 function prettyFieldLabel(key) {
@@ -846,6 +909,8 @@ function renderCardActions(project) {
   const isOverrideOpen = state.ui.openOverrideForms.has(project._tenderKey);
   const isFieldEditOpen = state.ui.openFieldEditForms.has(project._tenderKey);
   const verified = isVerified(project._tenderKey);
+  const inAkqList = isAlreadyInAkqList(project._tenderKey);
+  const seenByMe = isSeenByCurrentUser(project._tenderKey);
   const hasOpenRequest = hasOpenApprovalRequest(project._tenderKey);
   const latestRequest = getLatestApprovalRequest(project._tenderKey);
   const canResolveRequest = hasOpenRequest && latestRequest && latestRequest.user_id === state.auth.user.id;
@@ -858,7 +923,9 @@ function renderCardActions(project) {
       <button class="action-btn comment-toggle ${isCommentOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isCommentOpen ? "Kommentarfeld ausblenden" : "Add a comment"}</button>
       <button class="action-btn override-toggle ${isOverrideOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isOverrideOpen ? "Override-Feld ausblenden" : "Override score"}</button>
       <button class="action-btn field-edit-toggle ${isFieldEditOpen ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${isFieldEditOpen ? "Edit fields ausblenden" : "Edit card fields"}</button>
+      <button class="action-btn seen-toggle ${seenByMe ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">${seenByMe ? "Seen (undo)" : "Seen"}</button>
       <button class="action-btn verify-toggle ${verified ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Verified by Akquistions team</button>
+      <button class="action-btn akq-list-toggle ${inAkqList ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}">Already in Akquisions List</button>
       <button class="action-btn request-approval-toggle ${hasOpenRequest ? "active" : ""}" type="button" data-tender-key="${esc(project._tenderKey)}" ${hasOpenRequest && !canResolveRequest ? "disabled" : ""}>${requestLabel}</button>
     </div>
   `;
@@ -883,6 +950,7 @@ function renderCard(project) {
   const categoryValue = esc(normalize(view.category) || "-");
   const leistungen = esc(normalize(view.leistungen) || "-").replace(/\n/g, "<br>");
   const wettbewerbsart = esc(normalize(view.wettbewerb_art) || "-").replace(/\n/g, "<br>");
+  const zuschlagskriterien = esc(normalize(view.zuschlagskriterien) || "-").replace(/\n/g, "<br>");
   const gewinner = esc(normalize(view.gewinner) || "-").replace(/\n/g, "<br>");
   const gewinnerRolle = esc(normalize(view.gewinner_rolle) || "-").replace(/\n/g, "<br>");
   const erklaerung = esc(
@@ -897,6 +965,13 @@ function renderCard(project) {
     ? `<p class="override-byline">Overwritten by ${esc(latestOverride.user_email || "Unbekannt")}</p>`
     : "";
   const verifiedBadgeHtml = isVerified(project._tenderKey) ? '<span class="confirm-badge">Verified by AKQ</span>' : "";
+  const akqListBadgeHtml = isAlreadyInAkqList(project._tenderKey) ? '<span class="status-badge akq-listed">Already in Akquisions List</span>' : "";
+  const seenByMeBadgeHtml = isSeenByCurrentUser(project._tenderKey) ? '<span class="status-badge seen-by-me">Seen</span>' : "";
+  const seenCount = getSeenCount(project._tenderKey);
+  const seenUsers = getSeenUsersTooltip(project._tenderKey);
+  const seenCountBadgeHtml = seenCount > 0
+    ? `<span class="status-badge seen-count" title="${esc(seenUsers)}">Seen by ${seenCount}</span>`
+    : "";
   const requestBadgeHtml = hasOpenApprovalRequest(project._tenderKey) ? '<span class="status-badge request-open">AKQ Request Open</span>' : "";
   const editedBadgeHtml = hasFieldEdits(project._tenderKey) ? '<span class="status-badge edited">Fields Edited</span>' : "";
 
@@ -951,6 +1026,9 @@ function renderCard(project) {
         <div class="card-topline-left">
           <div class="source-badge">${esc(sourceTypeLabel)}</div>
           ${verifiedBadgeHtml}
+          ${akqListBadgeHtml}
+          ${seenByMeBadgeHtml}
+          ${seenCountBadgeHtml}
           ${requestBadgeHtml}
           ${editedBadgeHtml}
         </div>
@@ -976,6 +1054,7 @@ function renderCard(project) {
         <p><strong>${esc(mainLabel)}:</strong><br>${mainValue}</p>
         ${resultsMainFields}
         <p><strong>Relevanzbewertung Erklaerung:</strong><br>${erklaerung}</p>
+        <p><strong>Zuschlagskriterien:</strong><br>${zuschlagskriterien}</p>
         ${overwrittenByHtml}
       </section>
 
@@ -1021,7 +1100,7 @@ function refreshSingleCardByTenderKey(tenderKey) {
   }
 
   const existing = findCardElementByTenderKey(tenderKey);
-  const shouldShow = !!state.auth.user && matchesFilters(row);
+  const shouldShow = matchesFilters(row);
 
   if (!existing && shouldShow) {
     // Positioning depends on global sort/filter order.
@@ -1049,12 +1128,10 @@ function refreshSingleCardByTenderKey(tenderKey) {
 }
 
 function activeFilteredRows() {
-  if (!state.auth.user) return [];
   return sortRows(state.rows.filter((row) => matchesFilters(row)));
 }
 
 function countFilteredRows() {
-  if (!state.auth.user) return 0;
   return state.rows.reduce((acc, row) => acc + (matchesFilters(row) ? 1 : 0), 0);
 }
 
@@ -1069,10 +1146,6 @@ function updateCounts() {
 
 function renderCardsArea() {
   const pool = document.getElementById("cardsPool");
-  if (!state.auth.user) {
-    pool.innerHTML = "";
-    return;
-  }
   const filtered = activeFilteredRows();
   if (!filtered.length) {
     pool.innerHTML = "<p>Keine passenden Eintraege gefunden.</p>";
@@ -1108,12 +1181,16 @@ function splitChunks(values, size) {
 async function fetchByTenderKeys(table, selectColumns, tenderKeys) {
   const all = [];
   const chunks = splitChunks(tenderKeys, 200);
+  const orderColumnByTable = {
+    tender_seen: "seen_at",
+  };
+  const orderColumn = orderColumnByTable[table] || "created_at";
   for (const chunk of chunks) {
     const { data, error } = await state.auth.client
       .from(table)
       .select(selectColumns)
       .in("tender_key", chunk)
-      .order("created_at", { ascending: true });
+      .order(orderColumn, { ascending: true });
 
     if (error) throw error;
     all.push(...(data || []));
@@ -1220,6 +1297,8 @@ async function loadRemoteDataForTenderKeys(tenderKeys, options = {}) {
       state.remote.commentsByKey = new Map();
       state.remote.overridesByKey = new Map();
       state.remote.verificationsByKey = new Map();
+      state.remote.akqListByKey = new Map();
+      state.remote.seenByKey = new Map();
       state.remote.approvalRequestsByKey = new Map();
       state.remote.fieldEditsByKey = new Map();
       if (refresh) refreshUI();
@@ -1229,10 +1308,12 @@ async function loadRemoteDataForTenderKeys(tenderKeys, options = {}) {
 
   const requestId = state.remote.loadRequestId + 1;
   state.remote.loadRequestId = requestId;
-  const [comments, overrides, verifications, approvalRequests, fieldEdits] = await Promise.all([
+  const [comments, overrides, verifications, akqListFlags, seenRows, approvalRequests, fieldEdits] = await Promise.all([
     fetchByTenderKeys("tender_comments", "id,tender_key,user_id,user_email,comment_text,created_at,updated_at", uniqueKeys),
     fetchByTenderKeys("tender_score_overrides", "id,tender_key,user_id,user_email,score_value,reason_text,created_at", uniqueKeys),
     fetchByTenderKeys("tender_verifications", "id,tender_key,user_id,user_email,is_verified,created_at", uniqueKeys),
+    fetchByTenderKeys("tender_akq_list_flags", "id,tender_key,user_id,user_email,is_in_list,created_at", uniqueKeys),
+    fetchByTenderKeys("tender_seen", "id,tender_key,user_id,user_email,seen_at", uniqueKeys),
     fetchByTenderKeys("tender_approval_requests", "id,tender_key,user_id,user_email,status,created_at,updated_at", uniqueKeys),
     fetchByTenderKeys("tender_field_edits", "id,tender_key,user_id,user_email,edit_payload,created_at", uniqueKeys),
   ]);
@@ -1242,6 +1323,8 @@ async function loadRemoteDataForTenderKeys(tenderKeys, options = {}) {
   const commentsMap = mapByTenderKey(comments || []);
   const overridesMap = mapByTenderKey(overrides || []);
   const verificationsMap = mapByTenderKey(verifications || []);
+  const akqListMap = mapByTenderKey(akqListFlags || []);
+  const seenMap = mapByTenderKey(seenRows || []);
   const requestsMap = mapByTenderKey(approvalRequests || []);
   const fieldEditsMap = mapByTenderKey(fieldEdits || []);
 
@@ -1249,12 +1332,16 @@ async function loadRemoteDataForTenderKeys(tenderKeys, options = {}) {
     state.remote.commentsByKey = commentsMap;
     state.remote.overridesByKey = overridesMap;
     state.remote.verificationsByKey = verificationsMap;
+    state.remote.akqListByKey = akqListMap;
+    state.remote.seenByKey = seenMap;
     state.remote.approvalRequestsByKey = requestsMap;
     state.remote.fieldEditsByKey = fieldEditsMap;
   } else {
     state.remote.commentsByKey = mergeByTenderKeys(state.remote.commentsByKey, commentsMap, uniqueKeys);
     state.remote.overridesByKey = mergeByTenderKeys(state.remote.overridesByKey, overridesMap, uniqueKeys);
     state.remote.verificationsByKey = mergeByTenderKeys(state.remote.verificationsByKey, verificationsMap, uniqueKeys);
+    state.remote.akqListByKey = mergeByTenderKeys(state.remote.akqListByKey, akqListMap, uniqueKeys);
+    state.remote.seenByKey = mergeByTenderKeys(state.remote.seenByKey, seenMap, uniqueKeys);
     state.remote.approvalRequestsByKey = mergeByTenderKeys(state.remote.approvalRequestsByKey, requestsMap, uniqueKeys);
     state.remote.fieldEditsByKey = mergeByTenderKeys(state.remote.fieldEditsByKey, fieldEditsMap, uniqueKeys);
   }
@@ -1267,6 +1354,8 @@ async function loadRemoteData() {
     state.remote.commentsByKey = new Map();
     state.remote.overridesByKey = new Map();
     state.remote.verificationsByKey = new Map();
+    state.remote.akqListByKey = new Map();
+    state.remote.seenByKey = new Map();
     state.remote.approvalRequestsByKey = new Map();
     state.remote.fieldEditsByKey = new Map();
     state.ui.openCommentForms.clear();
@@ -1397,6 +1486,48 @@ async function toggleVerification(tenderKey) {
   });
   if (error) throw error;
   authMessage(!currentlyVerified ? "Karte verifiziert." : "Verifizierung entfernt.");
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+}
+
+async function toggleAkqList(tenderKey) {
+  if (!state.auth.user) {
+    authMessage("Bitte zuerst anmelden.", true);
+    return;
+  }
+  await ensureSessionReady();
+  const currentlyInList = isAlreadyInAkqList(tenderKey);
+  const { error } = await state.auth.client.from("tender_akq_list_flags").insert({
+    tender_key: tenderKey,
+    user_id: state.auth.user.id,
+    user_email: state.auth.user.email,
+    is_in_list: !currentlyInList,
+  });
+  if (error) throw error;
+  authMessage(!currentlyInList ? "Als bereits in Akquisitionsliste markiert." : "Markierung entfernt.");
+  await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
+}
+
+async function toggleSeen(tenderKey) {
+  if (!state.auth.user) {
+    authMessage("Bitte zuerst anmelden.", true);
+    return;
+  }
+  await ensureSessionReady();
+
+  const existing = getSeenHistory(tenderKey).find((entry) => entry.user_id === state.auth.user.id);
+  if (existing) {
+    const { error } = await state.auth.client.from("tender_seen").delete().eq("id", existing.id);
+    if (error) throw error;
+    authMessage("Als ungesehen markiert.");
+  } else {
+    const { error } = await state.auth.client.from("tender_seen").insert({
+      tender_key: tenderKey,
+      user_id: state.auth.user.id,
+      user_email: state.auth.user.email,
+    });
+    if (error) throw error;
+    authMessage("Als gesehen markiert.");
+  }
   await loadRemoteDataForTenderKeys([tenderKey], { refresh: true });
 }
 
@@ -1555,6 +1686,15 @@ function bindUi() {
     refreshUI();
   });
 
+  const unseenFilterBtn = document.getElementById("unseenFilterBtn");
+  if (unseenFilterBtn) {
+    unseenFilterBtn.addEventListener("click", (e) => {
+      state.filters.onlyUnseen = !state.filters.onlyUnseen;
+      e.currentTarget.classList.toggle("active", state.filters.onlyUnseen);
+      refreshUI();
+    });
+  }
+
   document.getElementById("sortOrder").addEventListener("change", (e) => {
     state.filters.sortOrder = normalize(e.target.value) || "score_desc";
     refreshUI();
@@ -1647,6 +1787,32 @@ function bindUi() {
           await toggleVerification(tenderKey);
         } catch (err) {
           authMessage(`Verifizierung konnte nicht gespeichert werden: ${err.message || err}`, true);
+        }
+      });
+      return;
+    }
+
+    if (target.classList.contains("seen-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      await runWithButtonLock(target, "Speichert...", async () => {
+        try {
+          await toggleSeen(tenderKey);
+        } catch (err) {
+          authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
+        }
+      });
+      return;
+    }
+
+    if (target.classList.contains("akq-list-toggle")) {
+      const tenderKey = normalize(target.getAttribute("data-tender-key"));
+      if (!tenderKey) return;
+      await runWithButtonLock(target, "Speichert...", async () => {
+        try {
+          await toggleAkqList(tenderKey);
+        } catch (err) {
+          authMessage(`AKQ-Listenstatus konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
       return;
