@@ -1693,8 +1693,19 @@ function bindUi() {
 
   document.querySelectorAll(".date-range-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const days = Number.parseInt(btn.getAttribute("data-days") || "", 10);
-      applyQuickDateRange(days);
+      if (btn.getAttribute("data-yesterday") === "true") {
+        const yesterday = new Date();
+        yesterday.setHours(0, 0, 0, 0);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const val = formatDateInput(yesterday);
+        document.getElementById("startDate").value = val;
+        document.getElementById("endDate").value = val;
+        state.filters.startDate = val;
+        state.filters.endDate = val;
+      } else {
+        const days = Number.parseInt(btn.getAttribute("data-days") || "", 10);
+        applyQuickDateRange(days);
+      }
       clearDateRangeQuickSelection();
       btn.classList.add("active");
       refreshUI();
