@@ -1,6 +1,8 @@
 const DATA_URL = "./data/ted_results.xlsx";
+const USA_DATA_URL = "./data/tender_results_usa.xlsx";
 const NEW_SHEET = "Agent_2";
 const RESULTS_SHEET = "Agent_2_Results";
+const USA_SHEET = "IMS_USA";
 
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
@@ -15,6 +17,7 @@ const LOCATION_FILTERS = [
   ["Central Europe", "region_central_europe"],
   ["Southern Europe", "region_southern_europe"],
   ["Global rest", "global_rest"],
+  ["USA", "usa"],
 ];
 
 const LOCATION_KEYWORDS = {
@@ -42,6 +45,7 @@ const REGION_KEYWORDS = {
     "belgien", "belgium", "niederlande", "netherlands", "luxemburg", "luxembourg",
   ],
   region_southern_europe: ["spanien", "spain", "portugal", "italien", "italy", "zypern", "cyprus"],
+  usa: ["usa", "united states", "u.s.", "us", "california", "texas", "florida", "new york", "washington"],
 };
 
 const state = {
@@ -167,9 +171,11 @@ function toAsciiKey(raw) {
     .replace(/-+$/, "");
 }
 
-function buildTenderKey(row, sourceType, index) {
-  const noticeId = normalize(row.id);
-  if (noticeId) return `ted:${noticeId}`;
+function buildTenderKey(row, sourceType, index, market = "ted") {
+  const noticeId = market === "usa"
+    ? normalize(row.csv_project_no)
+    : normalize(row.id);
+  if (noticeId) return market === "usa" ? `usa:${noticeId}` : `ted:${noticeId}`;
 
   const date = normalize(row.date);
   const title = normalize(row.titel || row.title);
@@ -177,7 +183,7 @@ function buildTenderKey(row, sourceType, index) {
   return fallback ? `fallback:${fallback}` : `fallback:${sourceType}-${index}`;
 }
 
-function parseSheetRows(workbook, sheetName, sourceType) {
+function parseSheetRows(workbook, sheetName, sourceType, market = "ted") {
   if (!workbook.SheetNames.includes(sheetName)) return [];
   const ws = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
@@ -197,7 +203,8 @@ function parseSheetRows(workbook, sheetName, sourceType) {
     });
     if (!hasAny) continue;
     row._source_type = sourceType;
-    row._tenderKey = buildTenderKey(row, sourceType, i);
+    row._market = market;
+    row._tenderKey = buildTenderKey(row, sourceType, i, market);
     row._key = `${row._tenderKey}::${i}`;
     out.push(row);
   }
@@ -308,11 +315,19 @@ function scoreFilterValue(score) {
 function buildNoticeLinks(project) {
   const noticeId = normalize(project.id);
   const detailLink = normalize(project.link);
+  const isUsa = normalize(project._market).toLowerCase() === "usa";
+  if (isUsa) {
+    const projectNo = normalize(project.csv_project_no);
+    if (!projectNo) return ["#", "#"];
+    const imsUrl = `https://www.imsinfo.com/Client/Export.aspx?SearchType=PNSearch&PN=${encodeURIComponent(projectNo)}`;
+    const websiteUrl = normalize(project.csv_website) || imsUrl;
+    return [imsUrl, websiteUrl];
+  }
   if (detailLink) {
-    const pdfLink = noticeId ? `https://ted.europa.eu/de/notice/${noticeId}/pdf` : detailLink;
+    const pdfLink = noticeId && !isUsa ? `https://ted.europa.eu/de/notice/${noticeId}/pdf` : detailLink;
     return [detailLink, pdfLink];
   }
-  if (noticeId) {
+  if (noticeId && !isUsa) {
     return [
       `https://ted.europa.eu/en/notice/-/detail/${noticeId}`,
       `https://ted.europa.eu/de/notice/${noticeId}/pdf`,
@@ -335,15 +350,91 @@ function sourceLabel(sourceType) {
   return sourceType === "results" ? "Results" : "New Competition";
 }
 
+function pickField(row, keys) {
+  for (const key of keys) {
+    const value = row ? row[key] : undefined;
+    if (normalize(value) !== "") return value;
+  }
+  return "";
+}
+
+function fieldTitle(row) {
+  return pickField(row, ["titel", "title", "project_title"]);
+}
+
+function fieldLocation(row) {
+  return pickField(row, ["projektlage", "project_location", "location"]);
+}
+
+function fieldServices(row) {
+  return pickField(row, ["leistungen", "services"]);
+}
+
+function fieldDeadline(row) {
+  return pickField(row, ["abgabefrist", "submission_deadline"]);
+}
+
+function fieldDate(row) {
+  return pickField(row, ["date", "csv_current_date"]);
+}
+
+function fieldSummary(row) {
+  return pickField(row, ["kurzbeschreibung", "short_description", "project_scope"]);
+}
+
+function fieldScope(row) {
+  return pickField(row, ["umfang", "project_scope"]);
+}
+
+function fieldRelevanceScore(row) {
+  return pickField(row, ["relevanzbewertung", "relevance_score"]);
+}
+
+function fieldRelevanceExplanation(row) {
+  return pickField(row, ["relevanzbewertung_erklaerung", "relevanzbewertung_begruendung", "relevance_explanation"]);
+}
+
+function fieldCost(row) {
+  const isUsa = normalize(row && row._market).toLowerCase() === "usa";
+  if (isUsa) {
+    return pickField(row, ["csv_total_construction_cost", "construction_cost_kg300_400_eur", "baukosten_kg300_400"]);
+  }
+  return pickField(row, ["baukosten_kg300_400", "construction_cost_kg300_400_eur", "csv_total_construction_cost"]);
+}
+
+function fieldCostExplanation(row) {
+  return pickField(row, ["baukosten_erklaerung", "construction_cost_explanation"]);
+}
+
+function fieldFee(row) {
+  return pickField(row, ["geschaetztes_honorar_sbp", "estimated_sbp_fee_eur"]);
+}
+
+function fieldFeeExplanation(row) {
+  return pickField(row, ["honorar_erklaerung", "fee_explanation"]);
+}
+
 function buildLocationTags(location) {
   const raw = normalizeKeywordText(location);
   if (!raw || raw === "-") return new Set(["global_rest"]);
+
+  const tokenized = raw.replace(/[^a-z0-9]+/g, " ");
+  const containsKeyword = (keyword) => {
+    const normalizedKeyword = normalizeKeywordText(keyword);
+    if (!normalizedKeyword) return false;
+    if (normalizedKeyword.length <= 3) {
+      const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`);
+      return re.test(tokenized);
+    }
+    return raw.includes(normalizedKeyword);
+  };
 
   const tags = new Set();
   LOCATION_FILTERS.forEach(([, value]) => {
     if (value === "global_rest") return;
     const keywords = REGION_KEYWORDS[value] || LOCATION_KEYWORDS[value] || [value];
-    if (keywords.some((kw) => raw.includes(normalizeKeywordText(kw)))) tags.add(value);
+    if (keywords.some((kw) => containsKeyword(kw))) tags.add(value);
   });
 
   if (!tags.size) tags.add("global_rest");
@@ -402,25 +493,30 @@ function renderNamedRows(fields) {
 }
 
 function enrichRow(row) {
-  const title = normalize(row.titel || row.title);
-  const lage = normalize(row.projektlage);
+  const title = normalize(fieldTitle(row));
+  const lage = normalize(fieldLocation(row));
   const category = normalize(row.category);
-  const leistungen = normalize(row.leistungen);
+  const leistungen = normalize(fieldServices(row));
   const wettbewerb = normalize(row.wettbewerb_art);
   const winner = normalize(row.gewinner);
   const winnerRole = normalize(row.gewinner_rolle);
 
-  row._baseScore = parseRelevanzScore(row.relevanzbewertung);
+  row._baseScore = parseRelevanzScore(fieldRelevanceScore(row));
   row._effectiveScore = row._baseScore;
-  row._effectiveScoreRaw = normalize(row.relevanzbewertung) || "-";
+  row._effectiveScoreRaw = normalize(fieldRelevanceScore(row)) || "-";
   row._scoreFilter = scoreFilterValue(row._effectiveScore);
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
   row._source = normalizeSourceType(row._source_type);
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
-  row._dateObj = parseRowDate(row.date);
-  row._deadlineObj = parseRowDate(row.abgabefrist);
-  row._costValue = parseCostSortable(row.baukosten_kg300_400);
+  row._dateObj = parseRowDate(fieldDate(row));
+  row._deadlineObj = parseRowDate(fieldDeadline(row));
+  row._costValue = parseCostSortable(fieldCost(row));
+}
+
+function formatConstructionCost(value, isUsa = false) {
+  if (isUsa) return normalize(value) || "-";
+  return formatMioEur(value);
 }
 
 function getOverrideHistory(tenderKey) {
@@ -522,10 +618,10 @@ function getEffectiveProjectData(project) {
 }
 
 function rebuildDerivedFields(row, sourceData) {
-  const title = normalize(sourceData.titel || sourceData.title);
-  const lage = normalize(sourceData.projektlage);
+  const title = normalize(fieldTitle(sourceData));
+  const lage = normalize(fieldLocation(sourceData));
   const category = normalize(sourceData.category);
-  const leistungen = normalize(sourceData.leistungen);
+  const leistungen = normalize(fieldServices(sourceData));
   const wettbewerb = normalize(sourceData.wettbewerb_art);
   const winner = normalize(sourceData.gewinner);
   const winnerRole = normalize(sourceData.gewinner_rolle);
@@ -533,9 +629,9 @@ function rebuildDerivedFields(row, sourceData) {
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
-  row._dateObj = parseRowDate(sourceData.date);
-  row._deadlineObj = parseRowDate(sourceData.abgabefrist);
-  row._costValue = parseCostSortable(sourceData.baukosten_kg300_400);
+  row._dateObj = parseRowDate(fieldDate(sourceData));
+  row._deadlineObj = parseRowDate(fieldDeadline(sourceData));
+  row._costValue = parseCostSortable(fieldCost(sourceData));
 }
 
 function applyEffectiveScores() {
@@ -543,14 +639,14 @@ function applyEffectiveScores() {
     row._effectiveData = getEffectiveProjectData(row);
     rebuildDerivedFields(row, row._effectiveData);
 
-    row._baseScore = parseRelevanzScore(row._effectiveData.relevanzbewertung);
+    row._baseScore = parseRelevanzScore(fieldRelevanceScore(row._effectiveData));
     const latest = getLatestOverride(row._tenderKey);
     if (latest) {
       row._effectiveScore = parseRelevanzScore(latest.score_value);
       row._effectiveScoreRaw = normalize(latest.score_value) || "-";
     } else {
       row._effectiveScore = row._baseScore;
-      row._effectiveScoreRaw = normalize(row._effectiveData.relevanzbewertung) || "-";
+      row._effectiveScoreRaw = normalize(fieldRelevanceScore(row._effectiveData)) || "-";
     }
     row._scoreFilter = scoreFilterValue(row._effectiveScore);
   });
@@ -778,7 +874,7 @@ function renderOverrides(project) {
     : "";
 
   const scoreState = latest
-    ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize((project._effectiveData || project).relevanzbewertung) || "-")})</p>`
+    ? `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (Override, AI: ${esc(normalize(fieldRelevanceScore(project._effectiveData || project)) || "-")})</p>`
     : `<p><strong>Aktiver Score:</strong> ${esc(project._effectiveScoreRaw)} (AI-Original)</p>`;
 
   if (!hasOverrides && !isFormOpen) {
@@ -937,29 +1033,28 @@ function renderCardActions(project) {
 
 function renderCard(project) {
   const view = project._effectiveData || project;
+  const isUsa = project._market === "usa";
   const scoreClass = scoreBadgeClass(Math.max(project._effectiveScore, 0));
 
-  const nummer = esc(normalize(view.id) || "-");
-  const datum = esc(parseDisplayDate(view.date));
-  const abgabefrist = esc(parseDisplayDate(view.abgabefrist));
-  const titel = esc(normalize(view.titel || view.title) || "-");
-  const kurzbeschreibung = esc(normalize(view.kurzbeschreibung) || "-").replace(/\n/g, "<br>");
+  const nummer = esc(normalize(view.csv_project_no || view.id) || "-");
+  const datum = esc(parseDisplayDate(fieldDate(view)));
+  const abgabefrist = esc(parseDisplayDate(fieldDeadline(view)));
+  const titel = esc(normalize(fieldTitle(view)) || "-");
+  const kurzbeschreibung = esc(normalize(fieldSummary(view)) || "-").replace(/\n/g, "<br>");
 
-  const lageText = normalize(view.projektlage) || "-";
+  const lageText = normalize(fieldLocation(view)) || "-";
   const mapsLink = buildGoogleMapsLink(lageText);
   const lage = mapsLink
     ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener noreferrer">${esc(lageText)}</a>`
     : esc(lageText);
 
   const categoryValue = esc(normalize(view.category) || "-");
-  const leistungen = esc(normalize(view.leistungen) || "-").replace(/\n/g, "<br>");
+  const leistungen = esc(normalize(fieldServices(view)) || "-").replace(/\n/g, "<br>");
   const wettbewerbsart = esc(normalize(view.wettbewerb_art) || "-").replace(/\n/g, "<br>");
   const zuschlagskriterien = esc(normalize(view.zuschlagskriterien) || "-").replace(/\n/g, "<br>");
   const gewinner = esc(normalize(view.gewinner) || "-").replace(/\n/g, "<br>");
   const gewinnerRolle = esc(normalize(view.gewinner_rolle) || "-").replace(/\n/g, "<br>");
-  const erklaerung = esc(
-    normalize(view.relevanzbewertung_erklaerung) || normalize(view.relevanzbewertung_begruendung) || "-"
-  ).replace(/\n/g, "<br>");
+  const erklaerung = esc(normalize(fieldRelevanceExplanation(view)) || "-").replace(/\n/g, "<br>");
 
   const [detailLink, pdfLink] = buildNoticeLinks(view);
   const sourceType = project._source;
@@ -979,12 +1074,12 @@ function renderCard(project) {
   const requestBadgeHtml = hasOpenApprovalRequest(project._tenderKey) ? '<span class="status-badge request-open">AKQ Request Open</span>' : "";
   const editedBadgeHtml = hasFieldEdits(project._tenderKey) ? '<span class="status-badge edited">Fields Edited</span>' : "";
 
-  let mainLabel = "Leistungen";
+  let mainLabel = isUsa ? "Services" : "Leistungen";
   let mainValue = leistungen;
   let resultsMainFields = "";
 
   if (sourceType === "results") {
-    mainLabel = "Wettbewerbsart";
+    mainLabel = isUsa ? "Competition type" : "Wettbewerbsart";
     mainValue = wettbewerbsart;
     resultsMainFields = `
       <p><strong>Gewinner:</strong><br>${gewinner}</p>
@@ -994,35 +1089,59 @@ function renderCard(project) {
 
   const kostenTable = sourceType === "results"
     ? renderNamedRows([
-      ["Baukosten kg300/400", formatMioEur(view.baukosten_kg300_400)],
-      ["Erklaerung der Baukosten", normalize(view.baukosten_erklaerung) || "-"],
+      [isUsa ? "Construction cost (kg300/400)" : "Baukosten kg300/400", formatConstructionCost(fieldCost(view), isUsa)],
+      [isUsa ? "Construction cost explanation" : "Erklaerung der Baukosten", normalize(fieldCostExplanation(view)) || "-"],
     ])
     : renderNamedRows([
-      ["Baukosten kg300/400", formatMioEur(view.baukosten_kg300_400)],
-      ["Erklaerung der Baukosten", normalize(view.baukosten_erklaerung) || "-"],
-      ["Honorar sbp", formatMioEur(view.geschaetztes_honorar_sbp)],
-      ["Erklaerung Honorar SBP", normalize(view.honorar_erklaerung) || "-"],
+      [isUsa ? "Construction cost (kg300/400)" : "Baukosten kg300/400", formatConstructionCost(fieldCost(view), isUsa)],
+      [isUsa ? "Construction cost explanation" : "Erklaerung der Baukosten", normalize(fieldCostExplanation(view)) || "-"],
+      [isUsa ? "sbp fee" : "Honorar sbp", formatMioEur(fieldFee(view))],
+      [isUsa ? "Fee explanation" : "Erklaerung Honorar SBP", normalize(fieldFeeExplanation(view)) || "-"],
     ]);
 
   const weitereTable = sourceType === "results"
     ? renderNamedRows([
-      ["Wettbewerbsart", normalize(view.wettbewerb_art) || "-"],
-      ["Gewinner", normalize(view.gewinner) || "-"],
-      ["Gewinner Rolle", normalize(view.gewinner_rolle) || "-"],
-      ["Gewinner Kontakt", normalize(view.gewinner_kontakt) || "-"],
-      ["Projektbeteiligte", normalize(view.projektbeteiligte) || "-"],
-      ["Naechste Schritte", normalize(view.naechste_schritte) || "-"],
+      [isUsa ? "Competition type" : "Wettbewerbsart", normalize(view.wettbewerb_art) || "-"],
+      [isUsa ? "Winner" : "Gewinner", normalize(view.gewinner) || "-"],
+      [isUsa ? "Winner role" : "Gewinner Rolle", normalize(view.gewinner_rolle) || "-"],
+      [isUsa ? "Winner contact" : "Gewinner Kontakt", normalize(view.gewinner_kontakt) || "-"],
+      [isUsa ? "Project participants" : "Projektbeteiligte", normalize(view.projektbeteiligte) || "-"],
+      [isUsa ? "Next steps" : "Naechste Schritte", normalize(view.naechste_schritte) || "-"],
       ["Notes", normalize(view.notes) || "-"],
     ])
     : renderNamedRows([
-      ["Abgabefrist", parseDisplayDate(view.abgabefrist)],
-      ["Leistungen", normalize(view.leistungen) || "-"],
-      ["Umfang", normalize(view.umfang) || "-"],
-      ["Zuschlagskriterien", normalize(view.zuschlagskriterien) || "-"],
-      ["Referenzen/Qualifikationen", normalize(view.referenzen_qualifikationen) || "-"],
-      ["Auftraggeber", normalize(view.auftraggeber) || "-"],
+      [isUsa ? "Submission deadline" : "Abgabefrist", parseDisplayDate(fieldDeadline(view))],
+      [isUsa ? "Services" : "Leistungen", normalize(fieldServices(view)) || "-"],
+      [isUsa ? "Scope" : "Umfang", normalize(fieldScope(view)) || "-"],
+      [isUsa ? "Award criteria" : "Zuschlagskriterien", normalize(view.zuschlagskriterien) || "-"],
+      [isUsa ? "References/Qualifications" : "Referenzen/Qualifikationen", normalize(view.referenzen_qualifikationen) || "-"],
+      [isUsa ? "Contracting authority" : "Auftraggeber", normalize(view.auftraggeber) || "-"],
       ["Notes", normalize(view.notes) || "-"],
     ]);
+
+  const labels = isUsa
+    ? {
+      date: "Publication date",
+      deadline: "Submission deadline",
+      location: "Location",
+      summary: "Short description",
+      relevance: "Relevance explanation",
+      awardCriteria: "Award criteria",
+      costSummary: "Cost estimate",
+      detailsSummary: "More information",
+      rightLink: "Website",
+    }
+    : {
+      date: "Datum der Veroeffentlichung",
+      deadline: "Abgabefrist",
+      location: "Lage",
+      summary: "Kurzbeschreibung",
+      relevance: "Relevanzbewertung Erklaerung",
+      awardCriteria: "Zuschlagskriterien",
+      costSummary: "Kostenschaetzung",
+      detailsSummary: "Weitere Informationen",
+      rightLink: "PDF",
+    };
 
   return `
     <article class="project ${scoreClass}" data-key="${esc(project._key)}" data-tender-key="${esc(project._tenderKey)}">
@@ -1044,33 +1163,33 @@ function renderCard(project) {
           <h2>${titel}</h2>
           <div class="head-grid">
             <p><strong>Number:</strong> ${nummer}</p>
-            <p><strong>Datum der Veröffentlichung:</strong> ${datum}</p>
-            <p><strong>Abgabefrist:</strong> ${abgabefrist}</p>
-            <p><strong>Lage:</strong> ${lage}</p>
+            <p><strong>${esc(labels.date)}:</strong> ${datum}</p>
+            <p><strong>${esc(labels.deadline)}:</strong> ${abgabefrist}</p>
+            <p><strong>${esc(labels.location)}:</strong> ${lage}</p>
             <p><strong>Category:</strong> ${categoryValue}</p>
-            <p><strong>Links:</strong> <a href="${esc(detailLink)}" target="_blank" rel="noopener noreferrer">Notice</a> | <a href="${esc(pdfLink)}" target="_blank" rel="noopener noreferrer">PDF</a></p>
+            <p><strong>Links:</strong> <a href="${esc(detailLink)}" target="_blank" rel="noopener noreferrer">Notice</a> | <a href="${esc(pdfLink)}" target="_blank" rel="noopener noreferrer">${esc(labels.rightLink)}</a></p>
           </div>
         </div>
       </header>
 
       <section class="always-visible">
-        <p><strong>Kurzbeschreibung:</strong><br>${kurzbeschreibung}</p>
+        <p><strong>${esc(labels.summary)}:</strong><br>${kurzbeschreibung}</p>
         <p><strong>${esc(mainLabel)}:</strong><br>${mainValue}</p>
         ${resultsMainFields}
-        <p><strong>Relevanzbewertung Erklaerung:</strong><br>${erklaerung}</p>
-        <p><strong>Zuschlagskriterien:</strong><br>${zuschlagskriterien}</p>
+        <p><strong>${esc(labels.relevance)}:</strong><br>${erklaerung}</p>
+        <p><strong>${esc(labels.awardCriteria)}:</strong><br>${zuschlagskriterien}</p>
         ${overwrittenByHtml}
       </section>
 
       ${renderCardActions(project)}
 
       <details class="details-block">
-        <summary>Kostenschaetzung</summary>
+        <summary>${esc(labels.costSummary)}</summary>
         <div class="details-content">${kostenTable}</div>
       </details>
 
       <details class="details-block">
-        <summary>Weitere Informationen</summary>
+        <summary>${esc(labels.detailsSummary)}</summary>
         <div class="details-content">${weitereTable}</div>
       </details>
 
@@ -1080,7 +1199,6 @@ function renderCard(project) {
     </article>
   `;
 }
-
 function ensureCardsEmptyState() {
   const pool = document.getElementById("cardsPool");
   if (!pool) return;
@@ -1949,20 +2067,27 @@ async function loadWorkbook() {
 
   try {
     if (!window.XLSX) throw new Error("SheetJS library not loaded.");
-    const response = await fetch(DATA_URL, { cache: "no-cache" });
-    if (!response.ok) throw new Error(`Could not fetch ${DATA_URL}. HTTP ${response.status}`);
+    const tedResponse = await fetch(DATA_URL, { cache: "no-cache" });
+    if (!tedResponse.ok) throw new Error(`Could not fetch ${DATA_URL}. HTTP ${tedResponse.status}`);
+    const usaResponse = await fetch(USA_DATA_URL, { cache: "no-cache" });
 
-    const buffer = await response.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+    const tedBuffer = await tedResponse.arrayBuffer();
+    const workbook = XLSX.read(tedBuffer, { type: "array", cellDates: true });
+    const usaWorkbook = usaResponse.ok
+      ? XLSX.read(await usaResponse.arrayBuffer(), { type: "array", cellDates: true })
+      : null;
 
     const warnings = [];
-    const newRows = parseSheetRows(workbook, NEW_SHEET, "new_competition");
-    const resultRows = parseSheetRows(workbook, RESULTS_SHEET, "results");
+    const newRows = parseSheetRows(workbook, NEW_SHEET, "new_competition", "ted");
+    const resultRows = parseSheetRows(workbook, RESULTS_SHEET, "results", "ted");
+    const usaRows = usaWorkbook ? parseSheetRows(usaWorkbook, USA_SHEET, "new_competition", "usa") : [];
 
     if (!workbook.SheetNames.includes(NEW_SHEET)) warnings.push(`Worksheet '${NEW_SHEET}' was not found.`);
     if (!workbook.SheetNames.includes(RESULTS_SHEET)) warnings.push(`Worksheet '${RESULTS_SHEET}' was not found.`);
+    if (!usaResponse.ok) warnings.push(`USA workbook could not be loaded (${USA_DATA_URL}, HTTP ${usaResponse.status}).`);
+    if (usaWorkbook && !usaWorkbook.SheetNames.includes(USA_SHEET)) warnings.push(`Worksheet '${USA_SHEET}' was not found in USA workbook.`);
 
-    state.rows = [...newRows, ...resultRows];
+    state.rows = [...newRows, ...resultRows, ...usaRows];
     state.rows.forEach((row) => enrichRow(row));
 
     addDynamicFilterButtons();
@@ -1970,7 +2095,7 @@ async function loadWorkbook() {
     initializeDateInputs();
     refreshUI();
 
-    status.textContent = `Workbook loaded: ${state.rows.length} rows from '${NEW_SHEET}' + '${RESULTS_SHEET}'.`;
+    status.textContent = `Workbook loaded: ${state.rows.length} rows from TED ('${NEW_SHEET}' + '${RESULTS_SHEET}') and USA ('${USA_SHEET}').`;
     warningsEl.innerHTML = warnings.map((w) => `<div>${esc(w)}</div>`).join("");
   } catch (err) {
     status.textContent = "Workbook load failed.";
@@ -2122,3 +2247,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+
