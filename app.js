@@ -62,7 +62,6 @@ const state = {
     onlyWithActivity: false,
     onlyWithOpenRequest: false,
     onlyUnseen: false,
-    sortOrder: "score_desc",
   },
   auth: {
     enabled: false,
@@ -358,6 +357,35 @@ function pickField(row, keys) {
   return "";
 }
 
+const CATEGORY_CANONICAL_RULES = [
+  { label: "Pedestrian and Bicycle Bridges", keywords: ["fußganger", "fussganger", "radfahrerbruck", "pedestrian", "bicycle bridge", "cycle bridge"] },
+  { label: "Road Bridges", keywords: ["straßenbruck", "strassenbruck", "road bridge", "highway bridge"] },
+  { label: "Railway Bridges", keywords: ["eisenbahnbruck", "rail bridge", "railway bridge"] },
+  { label: "Buildings", keywords: ["hochbauten", "hochbau", "building"] },
+  { label: "Tunnels", keywords: ["tunnel"] },
+  { label: "Water Infrastructure", keywords: ["wasserbau", "hydraulic", "water infrastructure"] },
+  { label: "Urban Infrastructure", keywords: ["stadt", "urban", "infrastructure"] },
+];
+
+function titleCaseWords(value) {
+  return normalize(value)
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function canonicalCategoryLabel(value) {
+  const raw = normalize(value);
+  if (!raw) return "";
+  const norm = normalizeKeywordText(raw);
+  for (const rule of CATEGORY_CANONICAL_RULES) {
+    if (rule.keywords.some((kw) => norm.includes(normalizeKeywordText(kw)))) return rule.label;
+  }
+  return titleCaseWords(raw);
+}
+
 function fieldTitle(row) {
   return pickField(row, ["titel", "title", "project_title"]);
 }
@@ -507,6 +535,7 @@ function enrichRow(row) {
   row._scoreFilter = scoreFilterValue(row._effectiveScore);
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
+  row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
   row._source = normalizeSourceType(row._source_type);
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
   row._dateObj = parseRowDate(fieldDate(row));
@@ -517,6 +546,17 @@ function enrichRow(row) {
 function formatConstructionCost(value, isUsa = false) {
   if (isUsa) return normalize(value) || "-";
   return formatMioEur(value);
+}
+
+function buildConstructionSummary(row, isUsa = false) {
+  const costRaw = normalize(fieldCost(row));
+  const costLabel = costRaw ? normalize(formatConstructionCost(costRaw, isUsa)) : "";
+  const explanation = normalize(fieldCostExplanation(row));
+
+  if (costLabel && explanation) return `${costLabel} (${explanation})`;
+  if (costLabel) return costLabel;
+  if (explanation) return explanation;
+  return "-";
 }
 
 function getOverrideHistory(tenderKey) {
@@ -628,6 +668,7 @@ function rebuildDerivedFields(row, sourceData) {
 
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
+  row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
   row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
   row._dateObj = parseRowDate(fieldDate(sourceData));
   row._deadlineObj = parseRowDate(fieldDeadline(sourceData));
@@ -652,28 +693,6 @@ function applyEffectiveScores() {
   });
 }
 
-function dateValueOrFallback(dateObj, fallback) {
-  if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return fallback;
-  return dateObj.getTime();
-}
-
-function sortRows(rows) {
-  const order = state.filters.sortOrder;
-  const sorted = rows.slice();
-
-  sorted.sort((a, b) => {
-    if (order === "date_desc") return dateValueOrFallback(b._dateObj, -1) - dateValueOrFallback(a._dateObj, -1);
-    if (order === "date_asc") return dateValueOrFallback(a._dateObj, Number.POSITIVE_INFINITY) - dateValueOrFallback(b._dateObj, Number.POSITIVE_INFINITY);
-    if (order === "deadline_desc") return dateValueOrFallback(b._deadlineObj, -1) - dateValueOrFallback(a._deadlineObj, -1);
-    if (order === "deadline_asc") return dateValueOrFallback(a._deadlineObj, Number.POSITIVE_INFINITY) - dateValueOrFallback(b._deadlineObj, Number.POSITIVE_INFINITY);
-    if (order === "cost_desc") return b._costValue - a._costValue;
-    if (order === "cost_asc") return a._costValue - b._costValue;
-    return b._effectiveScore - a._effectiveScore;
-  });
-
-  return sorted;
-}
-
 function addDynamicFilterButtons() {
   const locationWrap = document.getElementById("locationFilters");
   LOCATION_FILTERS.forEach(([label, value]) => {
@@ -683,7 +702,7 @@ function addDynamicFilterButtons() {
     );
   });
 
-  const categories = [...new Set(state.rows.map((r) => normalize(r.category)).filter(Boolean))].sort();
+  const categories = [...new Set(state.rows.map((r) => normalize(canonicalCategoryLabel(r.category))).filter(Boolean))].sort();
   const categoryWrap = document.getElementById("categoryFilters");
   categories.forEach((cat) => {
     categoryWrap.insertAdjacentHTML(
@@ -732,7 +751,9 @@ function matchesFilters(row, override = null) {
 
   const typeMatch = f.type === "all" || row._source === f.type;
   const locMatch = f.location === "all" || row._locationTags.has(f.location);
-  const catMatch = f.category === "all" || row._category.includes(f.category);
+  const catMatch = f.category === "all"
+    || row._categoryCanonical.includes(f.category)
+    || row._category.includes(f.category);
   const scoreMatch = f.scores.size === 0 || f.scores.has(row._scoreFilter);
   const searchMatch = !f.query || row._search.includes(f.query);
   const dateMatch = dateWithinRange(row._dateObj, f.startDate, f.endDate);
@@ -1055,6 +1076,7 @@ function renderCard(project) {
   const gewinner = esc(normalize(view.gewinner) || "-").replace(/\n/g, "<br>");
   const gewinnerRolle = esc(normalize(view.gewinner_rolle) || "-").replace(/\n/g, "<br>");
   const erklaerung = esc(normalize(fieldRelevanceExplanation(view)) || "-").replace(/\n/g, "<br>");
+  const constructionSummary = esc(buildConstructionSummary(view, isUsa)).replace(/\n/g, "<br>");
 
   const [detailLink, pdfLink] = buildNoticeLinks(view);
   const sourceType = project._source;
@@ -1130,6 +1152,7 @@ function renderCard(project) {
       costSummary: "Cost estimate",
       detailsSummary: "More information",
       rightLink: "Website",
+      construction: "Construction costs",
     }
     : {
       date: "Datum der Veroeffentlichung",
@@ -1141,6 +1164,7 @@ function renderCard(project) {
       costSummary: "Kostenschaetzung",
       detailsSummary: "Weitere Informationen",
       rightLink: "PDF",
+      construction: "Baukosten",
     };
 
   return `
@@ -1177,6 +1201,7 @@ function renderCard(project) {
         <p><strong>${esc(mainLabel)}:</strong><br>${mainValue}</p>
         ${resultsMainFields}
         <p><strong>${esc(labels.relevance)}:</strong><br>${erklaerung}</p>
+        <p><strong>${esc(labels.construction)}:</strong><br>${constructionSummary}</p>
         <p><strong>${esc(labels.awardCriteria)}:</strong><br>${zuschlagskriterien}</p>
         ${overwrittenByHtml}
       </section>
@@ -1250,7 +1275,10 @@ function refreshSingleCardByTenderKey(tenderKey) {
 }
 
 function activeFilteredRows() {
-  return sortRows(state.rows.filter((row) => matchesFilters(row)));
+  return state.rows
+    .filter((row) => matchesFilters(row))
+    .slice()
+    .sort((a, b) => b._effectiveScore - a._effectiveScore);
 }
 
 function countFilteredRows() {
@@ -1889,12 +1917,6 @@ function bindUi() {
       refreshUI();
     });
   }
-
-  document.getElementById("sortOrder").addEventListener("change", (e) => {
-    state.filters.sortOrder = normalize(e.target.value) || "score_desc";
-    refreshUI();
-  });
-  document.getElementById("sortOrder").value = state.filters.sortOrder;
 
   document.getElementById("cardsPool").addEventListener("submit", async (e) => {
     const form = e.target;
