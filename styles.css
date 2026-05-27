@@ -130,6 +130,27 @@ body:not(.dashboard-locked) .auth-gate {
   margin-bottom: 10px;
 }
 
+.action-status {
+  display: none;
+  margin: 0 0 12px 0;
+  padding: 10px 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+}
+
+.action-status:not(:empty) {
+  display: block;
+}
+
+.action-status.error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .period-banner {
   margin: 8px 0 14px 0;
   padding: 10px 12px;

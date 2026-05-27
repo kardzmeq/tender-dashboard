@@ -3,7 +3,6 @@ const USA_DATA_URL = "./data/tender_results_usa.xlsx";
 const NEW_SHEET = "Agent_2";
 const RESULTS_SHEET = "Agent_2_Results";
 const USA_SHEET = "IMS_USA";
-
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
   ["Stuttgart", "stuttgart"],
@@ -87,6 +86,7 @@ const state = {
     openOverrideForms: new Set(),
     openFieldEditForms: new Set(),
     pendingForms: new Set(),
+    actionMessageTimer: null,
   },
 };
 
@@ -109,6 +109,23 @@ function esc(v) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function setActionMessage(text, isError = false, timeoutMs = 8000) {
+  const el = document.getElementById("actionStatus");
+  if (!el) return;
+  if (state.ui.actionMessageTimer) {
+    window.clearTimeout(state.ui.actionMessageTimer);
+    state.ui.actionMessageTimer = null;
+  }
+  el.textContent = text;
+  el.classList.toggle("error", isError);
+  if (!text) return;
+  state.ui.actionMessageTimer = window.setTimeout(() => {
+    el.textContent = "";
+    el.classList.remove("error");
+    state.ui.actionMessageTimer = null;
+  }, timeoutMs);
 }
 
 function authMessage(text, isError = false) {
@@ -322,15 +339,14 @@ function buildNoticeLinks(project) {
     const websiteUrl = normalize(project.csv_website) || imsUrl;
     return [imsUrl, websiteUrl];
   }
-  if (detailLink) {
-    const pdfLink = noticeId && !isUsa ? `https://ted.europa.eu/de/notice/${noticeId}/pdf` : detailLink;
-    return [detailLink, pdfLink];
-  }
   if (noticeId && !isUsa) {
     return [
       `https://ted.europa.eu/en/notice/-/detail/${noticeId}`,
       `https://ted.europa.eu/de/notice/${noticeId}/pdf`,
     ];
+  }
+  if (detailLink) {
+    return [detailLink, detailLink];
   }
   return ["#", "#"];
 }
@@ -557,6 +573,454 @@ function buildConstructionSummary(row, isUsa = false) {
   if (costLabel) return costLabel;
   if (explanation) return explanation;
   return "-";
+}
+
+function formatDraftText(value) {
+  const raw = normalize(value);
+  if (!raw) return "";
+
+  const tmp = document.createElement("div");
+  tmp.innerHTML = raw
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p>/gi, "\n\n")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/?(ul|ol|p)>/gi, "");
+
+  return (tmp.textContent || tmp.innerText || raw)
+    .replace(/\u00a0/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function formatDraftHtml(value) {
+  const text = formatDraftText(value);
+  if (!text) return "";
+  return esc(text).replace(/\n/g, "<br>");
+}
+
+function indentDraftText(value) {
+  return formatDraftText(value)
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : ""))
+    .join("\n");
+}
+
+function buildDraftFieldLine(label, value, options = {}) {
+  const { fallback = "" } = options;
+  const text = formatDraftText(value);
+  if (!text) {
+    if (!fallback) return "";
+    return `${label}: ${fallback}`;
+  }
+  if (!text.includes("\n")) return `${label}: ${text}`;
+  return `${label}:\n${indentDraftText(text)}`;
+}
+
+function buildDraftSection(title, lines) {
+  const present = (lines || []).filter(Boolean);
+  if (!present.length) return "";
+  return `${title}\n${"-".repeat(title.length)}\n${present.join("\n\n")}`;
+}
+
+function buildDraftFieldsSection(title, fields) {
+  const lines = (fields || []).map(([label, value]) => buildDraftFieldLine(label, value, { fallback: "-" }));
+  return buildDraftSection(title, lines);
+}
+
+function getCardLabels(isUsa = false) {
+  return isUsa
+    ? {
+      date: "Publication date",
+      deadline: "Submission deadline",
+      location: "Location",
+      summary: "Short description",
+      relevance: "Relevance explanation",
+      awardCriteria: "Award criteria",
+      costSummary: "Cost estimate",
+      detailsSummary: "More information",
+      rightLink: "Website",
+      construction: "Construction costs",
+      services: "Services",
+      competitionType: "Competition type",
+      winner: "Winner",
+      winnerRole: "Winner role",
+      winnerContact: "Winner contact",
+      projectParticipants: "Project participants",
+      nextSteps: "Next steps",
+      scope: "Scope",
+      references: "References/Qualifications",
+      authority: "Contracting authority",
+      costLabel: "Construction cost (kg300/400)",
+      costExplanation: "Construction cost explanation",
+      fee: "sbp fee",
+      feeExplanation: "Fee explanation",
+      notes: "Notes",
+      summarySection: "Summary",
+      links: "Links",
+    }
+    : {
+      date: "Datum der Veroeffentlichung",
+      deadline: "Abgabefrist",
+      location: "Lage",
+      summary: "Kurzbeschreibung",
+      relevance: "Relevanzbewertung Erklaerung",
+      awardCriteria: "Zuschlagskriterien",
+      costSummary: "Kostenschaetzung",
+      detailsSummary: "Weitere Informationen",
+      rightLink: "PDF",
+      construction: "Baukosten",
+      services: "Leistungen",
+      competitionType: "Wettbewerbsart",
+      winner: "Gewinner",
+      winnerRole: "Gewinner Rolle",
+      winnerContact: "Gewinner Kontakt",
+      projectParticipants: "Projektbeteiligte",
+      nextSteps: "Naechste Schritte",
+      scope: "Umfang",
+      references: "Referenzen/Qualifikationen",
+      authority: "Auftraggeber",
+      costLabel: "Baukosten kg300/400",
+      costExplanation: "Erklaerung der Baukosten",
+      fee: "Honorar sbp",
+      feeExplanation: "Erklaerung Honorar SBP",
+      notes: "Notes",
+      summarySection: "Summary",
+      links: "Links",
+    };
+}
+
+function getCostEstimateFields(view, sourceType, isUsa = false) {
+  const labels = getCardLabels(isUsa);
+  if (sourceType === "results") {
+    return [
+      [labels.costLabel, formatConstructionCost(fieldCost(view), isUsa)],
+      [labels.costExplanation, normalize(fieldCostExplanation(view)) || "-"],
+    ];
+  }
+  return [
+    [labels.costLabel, formatConstructionCost(fieldCost(view), isUsa)],
+    [labels.costExplanation, normalize(fieldCostExplanation(view)) || "-"],
+    [labels.fee, formatMioEur(fieldFee(view))],
+    [labels.feeExplanation, normalize(fieldFeeExplanation(view)) || "-"],
+  ];
+}
+
+function getMoreInformationFields(view, sourceType, isUsa = false) {
+  const labels = getCardLabels(isUsa);
+  if (sourceType === "results") {
+    return [
+      [labels.competitionType, normalize(view.wettbewerb_art) || "-"],
+      [labels.winner, normalize(view.gewinner) || "-"],
+      [labels.winnerRole, normalize(view.gewinner_rolle) || "-"],
+      [labels.winnerContact, normalize(view.gewinner_kontakt) || "-"],
+      [labels.projectParticipants, normalize(view.projektbeteiligte) || "-"],
+      [labels.nextSteps, normalize(view.naechste_schritte) || "-"],
+      [labels.notes, normalize(view.notes) || "-"],
+    ];
+  }
+  return [
+    [labels.deadline, parseDisplayDate(fieldDeadline(view))],
+    [labels.services, normalize(fieldServices(view)) || "-"],
+    [labels.scope, normalize(fieldScope(view)) || "-"],
+    [labels.awardCriteria, normalize(view.zuschlagskriterien) || "-"],
+    [labels.references, normalize(view.referenzen_qualifikationen) || "-"],
+    [labels.authority, normalize(view.auftraggeber) || "-"],
+    [labels.notes, normalize(view.notes) || "-"],
+  ];
+}
+
+function getDraftScoreColor(project) {
+  const scoreClass = scoreBadgeClass(Math.max(project._effectiveScore, 0));
+  if (scoreClass === "high") return "#166534";
+  if (scoreClass === "mid") return "#ca8a04";
+  return "#475569";
+}
+
+function renderDraftHtmlFieldTable(fields) {
+  const rows = (fields || []).map(([label, value], index) => `
+    <tr>
+      <td valign="top" style="width: 30%; padding: 10px 12px; border-bottom: 1px solid #dbe4ee; background: ${index % 2 === 0 ? "#f8fbff" : "#ffffff"}; font-weight: 700; color: #1e293b;">
+        ${esc(label)}
+      </td>
+      <td valign="top" style="padding: 10px 12px; border-bottom: 1px solid #dbe4ee; background: ${index % 2 === 0 ? "#f8fbff" : "#ffffff"}; color: #0f172a;">
+        ${formatDraftHtml(value || "-") || "-"}
+      </td>
+    </tr>
+  `).join("");
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 1.55; border: 1px solid #dbe4ee; border-radius: 12px; overflow: hidden;">
+      ${rows}
+    </table>
+  `;
+}
+
+function renderDraftHtmlSection(title, innerHtml) {
+  if (!normalize(innerHtml)) return "";
+  return `
+    <div style="margin-top: 20px; padding: 18px 18px 16px 18px; border: 1px solid #dbe4ee; border-radius: 16px; background: linear-gradient(180deg, #ffffff, #f8fbff);">
+      <div style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; color: #0f172a;">
+        <span style="display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 999px; background: #0f766e;"></span>${esc(title)}
+      </div>
+      ${innerHtml}
+    </div>
+  `;
+}
+
+function renderDraftHtmlParagraph(label, value, fallback = "-") {
+  const htmlValue = formatDraftHtml(value || fallback) || esc(fallback);
+  return `
+    <div style="margin: 0 0 12px 0; padding: 12px 14px; border-radius: 12px; background: ${label === "Overwritten by" ? "#f0fdf4" : "#f8fafc"}; border: 1px solid ${label === "Overwritten by" ? "#bbf7d0" : "#e2e8f0"}; font-size: 14px; line-height: 1.6; color: #0f172a;">
+      <span style="font-weight: 700; color: #1e293b;">${esc(label)}:</span><br>
+      <span>${htmlValue}</span>
+    </div>
+  `;
+}
+
+function buildDraftHtml(project) {
+  const view = project._effectiveData || project;
+  const isUsa = normalize(project._market).toLowerCase() === "usa";
+  const sourceType = normalize(project._source);
+  const labels = getCardLabels(isUsa);
+  const sourceTypeLabel = sourceLabel(sourceType);
+  const scoreColor = getDraftScoreColor(project);
+  const number = normalize(view.csv_project_no || view.id) || "-";
+  const title = formatDraftHtml(fieldTitle(view) || "-") || "-";
+  const publicationDate = parseDisplayDate(fieldDate(view));
+  const submissionDeadline = parseDisplayDate(fieldDeadline(view));
+  const location = formatDraftHtml(fieldLocation(view) || "-") || "-";
+  const category = formatDraftHtml(normalize(view.category) || "-") || "-";
+  const shortDescription = fieldSummary(view) || "-";
+  const services = fieldServices(view) || "-";
+  const competitionType = pickField(view, ["wettbewerb_art"]) || "-";
+  const winner = pickField(view, ["gewinner"]) || "-";
+  const winnerRole = pickField(view, ["gewinner_rolle"]) || "-";
+  const awardCriteria = pickField(view, ["zuschlagskriterien", "award_criteria"]) || "-";
+  const relevanceExplanation = fieldRelevanceExplanation(view) || "-";
+  const [detailLink, secondaryLink] = buildNoticeLinks(view);
+  const noticeLink = normalize(detailLink) === "#" ? "" : detailLink;
+  const extraLink = normalize(secondaryLink) === "#" || normalize(secondaryLink) === normalize(detailLink) ? "" : secondaryLink;
+  const latestOverride = getLatestOverride(project._tenderKey);
+
+  const linksTable = renderDraftHtmlFieldTable([
+    ["Notice", noticeLink || "-"],
+    [labels.rightLink, extraLink || "-"],
+  ]).replace(
+    /(https?:\/\/[^\s<]+)/g,
+    (match) => `<a href="${esc(match)}" style="color: #1d4ed8; text-decoration: none; font-weight: 600;">${esc(match)}</a>`
+  );
+
+  const summaryHtml = [
+    renderDraftHtmlParagraph(labels.summary, shortDescription),
+    renderDraftHtmlParagraph(sourceType === "results" ? labels.competitionType : labels.services, sourceType === "results" ? competitionType : services),
+    sourceType === "results" ? renderDraftHtmlParagraph(labels.winner, winner) : "",
+    sourceType === "results" ? renderDraftHtmlParagraph(labels.winnerRole, winnerRole) : "",
+    renderDraftHtmlParagraph(labels.relevance, relevanceExplanation),
+    renderDraftHtmlParagraph(labels.construction, buildConstructionSummary(view, isUsa) || "-"),
+    renderDraftHtmlParagraph(labels.awardCriteria, awardCriteria),
+    latestOverride ? renderDraftHtmlParagraph("Overwritten by", latestOverride.user_email || "Unbekannt") : "",
+  ].join("");
+
+  return `
+    <div style="margin: 0; padding: 18px; background: linear-gradient(135deg, #eff6ff, #f8fafc 45%, #ecfeff);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 920px; border-collapse: separate; border-spacing: 0; font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 20px; overflow: hidden; background: #ffffff; box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);">
+        <tr>
+          <td style="padding: 24px 26px; background: linear-gradient(135deg, #0f172a, #1d4ed8 62%, #0f766e); border-bottom: 1px solid #cbd5e1;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+              <tr>
+                <td valign="top" style="width: 88px; padding-right: 16px;">
+                  <div style="width: 66px; height: 66px; line-height: 66px; text-align: center; border-radius: 18px; background: ${scoreColor}; color: #ffffff; font-size: 28px; font-weight: 800; border: 3px solid rgba(255,255,255,0.18);">
+                    ${esc(project._effectiveScoreRaw)}
+                  </div>
+                </td>
+                <td valign="top">
+                  <div style="margin-bottom: 12px;">
+                    <span style="display: inline-block; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,0.16); color: #eff6ff; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid rgba(255,255,255,0.16);">${esc(sourceTypeLabel)}</span>
+                    <span style="display: inline-block; padding: 5px 11px; margin-left: 6px; border-radius: 999px; background: rgba(255,255,255,0.12); color: #dbeafe; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.12);">Category: ${category}</span>
+                  </div>
+                  <div style="margin: 0 0 12px 0; font-size: 28px; line-height: 1.25; font-weight: 700; color: #ffffff;">${title}</div>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; font-size: 14px; line-height: 1.7; color: #dbeafe;">
+                    <tr><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">Number:</strong> ${esc(number)}</td><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">${esc(labels.date)}:</strong> ${esc(publicationDate)}</td></tr>
+                    <tr><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">${esc(labels.deadline)}:</strong> ${esc(submissionDeadline)}</td><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">${esc(labels.location)}:</strong> ${location}</td></tr>
+                    <tr><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">Score:</strong> ${esc(buildDraftScoreLabel(project))}</td><td style="padding: 0 18px 4px 0;"><strong style="color: #ffffff;">Tender key:</strong> ${esc(project._tenderKey)}</td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 24px 26px;">
+            ${renderDraftHtmlSection(labels.links, linksTable)}
+            ${renderDraftHtmlSection(labels.summarySection, summaryHtml)}
+            ${renderDraftHtmlSection(labels.costSummary, renderDraftHtmlFieldTable(getCostEstimateFields(view, sourceType, isUsa)))}
+            ${renderDraftHtmlSection(labels.detailsSummary, renderDraftHtmlFieldTable(getMoreInformationFields(view, sourceType, isUsa)))}
+          </td>
+        </tr>
+      </table>
+    </div>
+  `.trim();
+}
+
+function buildDraftScoreLabel(project) {
+  const score = normalize(project._effectiveScoreRaw) || "-";
+  return getLatestOverride(project._tenderKey) ? `${score} (override)` : score;
+}
+
+function buildDraftBody(project) {
+  const view = project._effectiveData || project;
+  const isUsa = normalize(project._market).toLowerCase() === "usa";
+  const sourceType = normalize(project._source);
+  const sourceTypeLabel = sourceLabel(sourceType);
+  const number = normalize(view.csv_project_no || view.id) || "-";
+  const title = formatDraftText(fieldTitle(view)) || "-";
+  const publicationDate = parseDisplayDate(fieldDate(view));
+  const submissionDeadline = parseDisplayDate(fieldDeadline(view));
+  const location = fieldLocation(view);
+  const category = normalize(view.category) || "-";
+  const shortDescription = fieldSummary(view);
+  const services = fieldServices(view);
+  const competitionType = pickField(view, ["wettbewerb_art"]);
+  const awardCriteria = pickField(view, ["zuschlagskriterien", "award_criteria"]);
+  const winner = pickField(view, ["gewinner"]);
+  const winnerRole = pickField(view, ["gewinner_rolle"]);
+  const relevanceExplanation = fieldRelevanceExplanation(view);
+  const [detailLink, secondaryLink] = buildNoticeLinks(view);
+  const noticeLink = normalize(detailLink) === "#" ? "" : detailLink;
+  const extraLink = normalize(secondaryLink) === "#" || normalize(secondaryLink) === normalize(detailLink) ? "" : secondaryLink;
+  const labels = getCardLabels(isUsa);
+  const latestOverride = getLatestOverride(project._tenderKey);
+  const headerUnderline = "=".repeat(Math.max(16, Math.min(72, title.length)));
+  const mainLabel = sourceType === "results" ? labels.competitionType : labels.services;
+  const mainValue = sourceType === "results" ? competitionType : services;
+
+  const headerBlock = [
+    title,
+    headerUnderline,
+    `Source: ${sourceTypeLabel}`,
+    `Tender key: ${project._tenderKey}`,
+    `Score: ${buildDraftScoreLabel(project)}`,
+    buildDraftFieldLine("Number", number, { fallback: "-" }),
+    buildDraftFieldLine(labels.date, publicationDate, { fallback: "-" }),
+    buildDraftFieldLine(labels.deadline, submissionDeadline, { fallback: "-" }),
+    buildDraftFieldLine(labels.location, location, { fallback: "-" }),
+    buildDraftFieldLine("Category", category, { fallback: "-" }),
+  ].filter(Boolean).join("\n");
+
+  const linksSection = buildDraftFieldsSection(labels.links, [
+    ["Notice", noticeLink || "-"],
+    [labels.rightLink, extraLink || "-"],
+  ]);
+
+  const summarySection = buildDraftSection(labels.summarySection, [
+    buildDraftFieldLine(labels.summary, shortDescription, { fallback: "-" }),
+    buildDraftFieldLine(mainLabel, mainValue, { fallback: "-" }),
+    sourceType === "results" ? buildDraftFieldLine(labels.winner, winner, { fallback: "-" }) : "",
+    sourceType === "results" ? buildDraftFieldLine(labels.winnerRole, winnerRole, { fallback: "-" }) : "",
+    buildDraftFieldLine(labels.relevance, relevanceExplanation, { fallback: "-" }),
+    buildDraftFieldLine(labels.construction, buildConstructionSummary(view, isUsa), { fallback: "-" }),
+    buildDraftFieldLine(labels.awardCriteria, awardCriteria, { fallback: "-" }),
+    latestOverride ? buildDraftFieldLine("Overwritten by", latestOverride.user_email || "Unbekannt", { fallback: "-" }) : "",
+  ]);
+
+  const costSection = buildDraftFieldsSection(labels.costSummary, getCostEstimateFields(view, sourceType, isUsa));
+
+  const detailsSection = buildDraftFieldsSection(labels.detailsSummary, getMoreInformationFields(view, sourceType, isUsa));
+
+  return [
+    headerBlock,
+    linksSection,
+    summarySection,
+    costSection,
+    detailsSection,
+  ].filter(Boolean).join("\n\n");
+}
+
+async function copyTextToClipboard(text) {
+  const value = normalize(text);
+  if (!value) throw new Error("Nothing to copy.");
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "readonly");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!copied) throw new Error("Clipboard access is not available.");
+}
+
+function legacyCopyRichTextToClipboard(html, text) {
+  let copied = false;
+  const onCopy = (event) => {
+    if (!event.clipboardData) return;
+    event.clipboardData.setData("text/html", html);
+    event.clipboardData.setData("text/plain", text);
+    event.preventDefault();
+    copied = true;
+  };
+
+  document.addEventListener("copy", onCopy);
+  try {
+    document.execCommand("copy");
+  } finally {
+    document.removeEventListener("copy", onCopy);
+  }
+
+  if (!copied) throw new Error("Rich clipboard access is not available.");
+}
+
+async function copyRichTextToClipboard(html, text) {
+  const richHtml = normalize(html);
+  const plainText = normalize(text);
+  if (!richHtml || !plainText) throw new Error("Nothing to copy.");
+
+  if (window.ClipboardItem && navigator.clipboard && typeof navigator.clipboard.write === "function") {
+    const item = new ClipboardItem({
+      "text/html": new Blob([richHtml], { type: "text/html" }),
+      "text/plain": new Blob([plainText], { type: "text/plain" }),
+    });
+    await navigator.clipboard.write([item]);
+    return;
+  }
+
+  legacyCopyRichTextToClipboard(richHtml, plainText);
+}
+
+async function copyTenderToClipboard(project) {
+  const body = buildDraftBody(project);
+  const htmlBody = buildDraftHtml(project);
+
+  try {
+    await copyRichTextToClipboard(htmlBody, body);
+    setActionMessage("Formatted tender card copied to the clipboard. Paste it where needed with Ctrl+V.");
+    return true;
+  } catch (err) {
+    try {
+      await copyTextToClipboard(body);
+      setActionMessage("Rich formatting is not available here. Plain text was copied to the clipboard.");
+      return true;
+    } catch (fallbackErr) {
+      setActionMessage(`Tender card could not be copied to the clipboard: ${fallbackErr.message || fallbackErr}`, true, 10000);
+      return false;
+    }
+  }
 }
 
 function getOverrideHistory(tenderKey) {
@@ -1052,6 +1516,14 @@ function renderCardActions(project) {
   `;
 }
 
+function renderPublicCardActions(project) {
+  return `
+    <div class="card-actions">
+      <button class="action-btn copy-card-btn" type="button" data-action="copy-card" data-tender-key="${esc(project._tenderKey)}">Copy to Clipboard</button>
+    </div>
+  `;
+}
+
 function renderCard(project) {
   const view = project._effectiveData || project;
   const isUsa = project._market === "usa";
@@ -1109,63 +1581,9 @@ function renderCard(project) {
     `;
   }
 
-  const kostenTable = sourceType === "results"
-    ? renderNamedRows([
-      [isUsa ? "Construction cost (kg300/400)" : "Baukosten kg300/400", formatConstructionCost(fieldCost(view), isUsa)],
-      [isUsa ? "Construction cost explanation" : "Erklaerung der Baukosten", normalize(fieldCostExplanation(view)) || "-"],
-    ])
-    : renderNamedRows([
-      [isUsa ? "Construction cost (kg300/400)" : "Baukosten kg300/400", formatConstructionCost(fieldCost(view), isUsa)],
-      [isUsa ? "Construction cost explanation" : "Erklaerung der Baukosten", normalize(fieldCostExplanation(view)) || "-"],
-      [isUsa ? "sbp fee" : "Honorar sbp", formatMioEur(fieldFee(view))],
-      [isUsa ? "Fee explanation" : "Erklaerung Honorar SBP", normalize(fieldFeeExplanation(view)) || "-"],
-    ]);
-
-  const weitereTable = sourceType === "results"
-    ? renderNamedRows([
-      [isUsa ? "Competition type" : "Wettbewerbsart", normalize(view.wettbewerb_art) || "-"],
-      [isUsa ? "Winner" : "Gewinner", normalize(view.gewinner) || "-"],
-      [isUsa ? "Winner role" : "Gewinner Rolle", normalize(view.gewinner_rolle) || "-"],
-      [isUsa ? "Winner contact" : "Gewinner Kontakt", normalize(view.gewinner_kontakt) || "-"],
-      [isUsa ? "Project participants" : "Projektbeteiligte", normalize(view.projektbeteiligte) || "-"],
-      [isUsa ? "Next steps" : "Naechste Schritte", normalize(view.naechste_schritte) || "-"],
-      ["Notes", normalize(view.notes) || "-"],
-    ])
-    : renderNamedRows([
-      [isUsa ? "Submission deadline" : "Abgabefrist", parseDisplayDate(fieldDeadline(view))],
-      [isUsa ? "Services" : "Leistungen", normalize(fieldServices(view)) || "-"],
-      [isUsa ? "Scope" : "Umfang", normalize(fieldScope(view)) || "-"],
-      [isUsa ? "Award criteria" : "Zuschlagskriterien", normalize(view.zuschlagskriterien) || "-"],
-      [isUsa ? "References/Qualifications" : "Referenzen/Qualifikationen", normalize(view.referenzen_qualifikationen) || "-"],
-      [isUsa ? "Contracting authority" : "Auftraggeber", normalize(view.auftraggeber) || "-"],
-      ["Notes", normalize(view.notes) || "-"],
-    ]);
-
-  const labels = isUsa
-    ? {
-      date: "Publication date",
-      deadline: "Submission deadline",
-      location: "Location",
-      summary: "Short description",
-      relevance: "Relevance explanation",
-      awardCriteria: "Award criteria",
-      costSummary: "Cost estimate",
-      detailsSummary: "More information",
-      rightLink: "Website",
-      construction: "Construction costs",
-    }
-    : {
-      date: "Datum der Veroeffentlichung",
-      deadline: "Abgabefrist",
-      location: "Lage",
-      summary: "Kurzbeschreibung",
-      relevance: "Relevanzbewertung Erklaerung",
-      awardCriteria: "Zuschlagskriterien",
-      costSummary: "Kostenschaetzung",
-      detailsSummary: "Weitere Informationen",
-      rightLink: "PDF",
-      construction: "Baukosten",
-    };
+  const labels = getCardLabels(isUsa);
+  const kostenTable = renderNamedRows(getCostEstimateFields(view, sourceType, isUsa));
+  const weitereTable = renderNamedRows(getMoreInformationFields(view, sourceType, isUsa));
 
   return `
     <article class="project ${scoreClass}" data-key="${esc(project._key)}" data-tender-key="${esc(project._tenderKey)}">
@@ -1206,6 +1624,7 @@ function renderCard(project) {
         ${overwrittenByHtml}
       </section>
 
+      ${renderPublicCardActions(project)}
       ${renderCardActions(project)}
 
       <details class="details-block">
@@ -1979,6 +2398,7 @@ function bindUi() {
     const cardTenderKey = card ? normalize(card.getAttribute("data-tender-key")) : "";
     const tenderKey = normalize(clickedButton.getAttribute("data-tender-key")) || cardTenderKey;
     let handled = true;
+    let shouldMarkSeen = true;
 
     if (action === "toggle-comment") {
       if (!tenderKey) return;
@@ -2006,6 +2426,7 @@ function bindUi() {
       });
     } else if (action === "toggle-seen") {
       if (!tenderKey) return;
+      shouldMarkSeen = false;
       await runWithButtonLock(clickedButton, "Speichert...", async () => {
         try {
           await toggleSeen(tenderKey);
@@ -2013,6 +2434,17 @@ function bindUi() {
           authMessage(`Seen-Status konnte nicht gespeichert werden: ${err.message || err}`, true);
         }
       });
+    } else if (action === "copy-card") {
+      if (!tenderKey) return;
+      const project = state.rows.find((row) => row._tenderKey === tenderKey);
+      if (!project) {
+        shouldMarkSeen = false;
+        setActionMessage("Tender card could not be resolved.", true, 10000);
+      } else {
+        await runWithButtonLock(clickedButton, "Kopiert...", async () => {
+          shouldMarkSeen = await copyTenderToClipboard(project);
+        });
+      }
     } else if (action === "toggle-akq-list") {
       if (!tenderKey) return;
       await runWithButtonLock(clickedButton, "Speichert...", async () => {
@@ -2065,7 +2497,7 @@ function bindUi() {
       handled = false;
     }
 
-    if (handled && action !== "toggle-seen") {
+    if (handled && shouldMarkSeen) {
       markSeenNonBlocking(tenderKey);
     }
   });
