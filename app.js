@@ -10,6 +10,8 @@ const LOCATION_FILTERS = [
   ["Deutschland", "deutschland"],
   ["Frankreich", "frankreich"],
   ["Spanien", "spanien"],
+  ["Italien", "italien"],
+  ["Bulgarien", "bulgarien"],
   ["Britanien", "britanien"],
   ["Nordics & Baltics", "region_nordics_baltics"],
   ["Eastern Europe & Balkans", "region_eastern_balkans"],
@@ -26,6 +28,8 @@ const LOCATION_KEYWORDS = {
   deutschland: ["deutschland", "germany"],
   frankreich: ["frankreich", "france"],
   spanien: ["spanien", "spain"],
+  italien: ["italien", "italy", "italia"],
+  bulgarien: ["bulgarien", "bulgaria"],
 };
 
 const REGION_KEYWORDS = {
@@ -100,6 +104,22 @@ function normalizeKeywordText(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function searchIndexText(value) {
+  const raw = normalize(value).toLowerCase();
+  if (!raw) return "";
+  const accentless = normalizeKeywordText(raw);
+  const germanAscii = raw
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss");
+  return [...new Set([raw, accentless, germanAscii])].join(" ");
+}
+
+function buildSearchIndex(values) {
+  return values.map(searchIndexText).filter(Boolean).join(" ");
 }
 
 function esc(v) {
@@ -553,7 +573,7 @@ function enrichRow(row) {
   row._category = category.toLowerCase();
   row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
   row._source = normalizeSourceType(row._source_type);
-  row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
+  row._search = buildSearchIndex([title, lage, category, leistungen, wettbewerb, winner, winnerRole, row._source]);
   row._dateObj = parseRowDate(fieldDate(row));
   row._deadlineObj = parseRowDate(fieldDeadline(row));
   row._costValue = parseCostSortable(fieldCost(row));
@@ -1133,7 +1153,7 @@ function rebuildDerivedFields(row, sourceData) {
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
   row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
-  row._search = `${title} ${lage} ${category} ${leistungen} ${wettbewerb} ${winner} ${winnerRole} ${row._source}`.toLowerCase();
+  row._search = buildSearchIndex([title, lage, category, leistungen, wettbewerb, winner, winnerRole, row._source]);
   row._dateObj = parseRowDate(fieldDate(sourceData));
   row._deadlineObj = parseRowDate(fieldDeadline(sourceData));
   row._costValue = parseCostSortable(fieldCost(sourceData));
@@ -1261,6 +1281,7 @@ function updateFilterCountBadges() {
     if (group === "type") count = computeVisibleCount({ type: value });
     else if (group === "location") count = computeVisibleCount({ location: value });
     else if (group === "category") count = computeVisibleCount({ category: value });
+    else if (group === "search") count = computeVisibleCount({ query: normalizeKeywordText(value) });
     else if (group === "score") {
       const scoreSet = value === "all" ? new Set() : new Set([value]);
       count = computeVisibleCount({ scores: scoreSet });
@@ -1739,6 +1760,23 @@ function activateSingleSelectFilter(group, value, clickedButton) {
 
   document.querySelectorAll(`.filter-btn[data-filter-group="${group}"]`).forEach((b) => b.classList.remove("active"));
   clickedButton.classList.add("active");
+}
+
+function updateSearchPresetButtons() {
+  document.querySelectorAll('.filter-btn[data-filter-group="search"]').forEach((btn) => {
+    const presetQuery = normalizeKeywordText(btn.getAttribute("data-value") || "");
+    btn.classList.toggle("active", !!state.filters.query && state.filters.query === presetQuery);
+  });
+}
+
+function activateSearchPresetFilter(value) {
+  const presetQuery = normalizeKeywordText(value);
+  const isActive = state.filters.query === presetQuery;
+  const nextQuery = isActive ? "" : presetQuery;
+  const searchEl = document.getElementById("liveSearch");
+  state.filters.query = nextQuery;
+  if (searchEl) searchEl.value = isActive ? "" : value;
+  updateSearchPresetButtons();
 }
 
 function splitChunks(values, size) {
@@ -2240,7 +2278,8 @@ function bindUi() {
   });
 
   document.getElementById("liveSearch").addEventListener("input", (e) => {
-    state.filters.query = normalize(e.target.value).toLowerCase();
+    state.filters.query = normalizeKeywordText(e.target.value);
+    updateSearchPresetButtons();
     refreshUI();
   });
 
@@ -2302,6 +2341,8 @@ function bindUi() {
             else allBtn.classList.remove("active");
           }
         }
+      } else if (group === "search") {
+        activateSearchPresetFilter(value);
       } else {
         activateSingleSelectFilter(group, value, btn);
       }
