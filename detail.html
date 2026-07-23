@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tender Detail</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="detail-page">
+  <section id="authPanel" class="auth-panel">
+    <div class="auth-head">
+      <div id="authStatus" class="auth-status">Nicht angemeldet</div>
+      <button id="authToggleBtn" class="action-btn auth-toggle-btn" type="button">Ausblenden</button>
+    </div>
+    <div class="auth-grid">
+      <form id="registerForm" class="auth-form">
+        <h2>Registrieren</h2>
+        <label for="registerEmail">E-Mail</label>
+        <input id="registerEmail" type="email" required autocomplete="email">
+        <label for="registerPassword">Passwort</label>
+        <input id="registerPassword" type="password" required autocomplete="new-password" minlength="8">
+        <button class="action-btn" type="submit">Registrieren</button>
+      </form>
+      <form id="loginForm" class="auth-form">
+        <h2>Anmelden</h2>
+        <label for="loginEmail">E-Mail</label>
+        <input id="loginEmail" type="email" required autocomplete="email">
+        <label for="loginPassword">Passwort</label>
+        <input id="loginPassword" type="password" required autocomplete="current-password">
+        <button class="action-btn submit-btn" type="submit">Anmelden</button>
+      </form>
+      <div class="auth-form auth-actions">
+        <h2>Konto</h2>
+        <p>Kommentare und globale Score-Overrides sind nur für registrierte Nutzer verfügbar.</p>
+        <button id="logoutBtn" class="action-btn" type="button">Abmelden</button>
+      </div>
+    </div>
+    <div id="authMessage" class="auth-message" aria-live="polite"></div>
+  </section>
+  <div id="authGate" class="auth-gate" aria-live="polite">Nicht angemeldet: Dashboard und Filter sind sichtbar. "Copy to Clipboard" ist verfuegbar, weitere Karten-Aktionen nur nach Login.</div>
+
+  <header class="detail-page-head">
+    <a class="action-btn" href="index.html">Back to Dashboard</a>
+    <div>
+      <h1>Tender Detail</h1>
+      <p id="detailMeta" class="meta"></p>
+    </div>
+  </header>
+
+  <div id="loadStatus" class="period-banner">Loading tender...</div>
+  <p id="metaInfo" class="meta detail-hidden-meta"></p>
+  <div id="loadWarnings" class="warnings" aria-live="polite"></div>
+  <div id="actionStatus" class="action-status" aria-live="polite"></div>
+  <div id="resultsCount" class="results-count detail-hidden-meta"></div>
+  <main id="cardsPool"></main>
+</body>
+</html>

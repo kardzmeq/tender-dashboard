@@ -19,6 +19,14 @@ dashboard folder before publishing.
 The dashboard loads daily indexes on demand based on the selected date range.
 The legacy `_index.json` files are retained as a fallback.
 
+Direct tender links are served through `detail.html`, for example:
+
+- `detail.html?folder=Agent_2_Results&date=260722&id=508025-2026`
+- `detail.html?folder=IMS_USA&date=260722&id=1012345`
+
+The detail page reads the matching daily `_indexes/<yyMMdd>.json` shard and
+does not require the single per-project JSON archive files.
+
 ## Local Test
 
 From this folder run a simple static server:

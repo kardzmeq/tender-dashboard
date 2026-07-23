@@ -22,6 +22,7 @@ const DATA_SOURCES = [
     fallbackUrl: "./JSON_Output/IMS_USA/_index.json",
   },
 ];
+const DASHBOARD_FILTER_STORAGE_KEY = "tenderDashboard.filters.v1";
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
   ["Stuttgart", "stuttgart"],
@@ -274,6 +275,28 @@ function parseJsonIndexRows(indexPayload, sourceType, market = "ted") {
   return out;
 }
 
+function rowDatePrefix(row) {
+  const fromFile = normalize(row && row._json_file).match(/^([0-9]{6})_/);
+  if (fromFile) return fromFile[1];
+  const d = parseRowDate(fieldDate(row));
+  return d ? datePrefixFromDate(d) : "";
+}
+
+function dashboardFolderForRow(row) {
+  if (normalize(row && row._market).toLowerCase() === "usa") return "IMS_USA";
+  return normalizeSourceType(row && row._source_type) === "results" ? "Agent_2_Results" : "Agent_2";
+}
+
+function detailPageUrl(project) {
+  const view = project && (project._effectiveData || project);
+  const id = normalize(view && (view.csv_project_no || view.id));
+  const datePrefix = rowDatePrefix(project);
+  const folder = dashboardFolderForRow(project);
+  if (!id || !datePrefix || !folder) return "";
+  const params = new URLSearchParams({ folder, date: datePrefix, id });
+  return `detail.html?${params.toString()}`;
+}
+
 async function fetchJsonIndex(url, warnings, options = {}) {
   const { allowMissing = false } = options;
   const response = await fetch(url, { cache: "no-cache" });
@@ -362,6 +385,7 @@ async function ensureRowsForCurrentDateRange(options = {}) {
   if (!state.data.manifest) {
     const newTenderKeys = await loadFallbackIndexes(warnings);
     addDynamicFilterButtons();
+    syncFilterControls();
     if (loadRemote && newTenderKeys.length && state.auth.user) {
       await loadRemoteDataForTenderKeys(newTenderKeys, { replaceAll: false, refresh: false });
     }
@@ -401,6 +425,7 @@ async function ensureRowsForCurrentDateRange(options = {}) {
 
   const newTenderKeys = mergeRows(rows);
   addDynamicFilterButtons();
+  syncFilterControls();
   if (loadRemote && newTenderKeys.length && state.auth.user) {
     await loadRemoteDataForTenderKeys(newTenderKeys, { replaceAll: false, refresh: false });
   }
@@ -494,40 +519,6 @@ function datePrefixesForRange(startRaw, endRaw) {
   return prefixes;
 }
 
-function dateInputFromPrefix(prefix) {
-  const raw = normalize(prefix);
-  if (!/^[0-9]{6}$/.test(raw)) return "";
-  return `20${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4, 6)}`;
-}
-
-function manifestHasAnyRowsForPrefix(prefix) {
-  return DATA_SOURCES.some((source) => {
-    const entry = manifestEntryFor(source, prefix);
-    return entry && Number(entry.count || 0) > 0;
-  });
-}
-
-function applyLatestAvailableDateIfTodayIsEmpty() {
-  if (!state.data.manifest || !Array.isArray(state.data.manifest.dates)) return;
-  const todayPrefix = datePrefixesForRange(state.filters.startDate, state.filters.endDate)[0];
-  if (todayPrefix && manifestHasAnyRowsForPrefix(todayPrefix)) return;
-
-  const availableDates = state.data.manifest.dates
-    .filter((prefix) => /^[0-9]{6}$/.test(prefix) && manifestHasAnyRowsForPrefix(prefix))
-    .sort();
-  const latestPrefix = availableDates[availableDates.length - 1];
-  const latestDate = dateInputFromPrefix(latestPrefix);
-  if (!latestDate) return;
-
-  const startEl = document.getElementById("startDate");
-  const endEl = document.getElementById("endDate");
-  if (startEl) startEl.value = latestDate;
-  if (endEl) endEl.value = latestDate;
-  state.filters.startDate = latestDate;
-  state.filters.endDate = latestDate;
-  clearDateRangeQuickSelection();
-}
-
 function formatDateTime(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
@@ -564,6 +555,123 @@ function applyQuickDateRange(days) {
 
   state.filters.startDate = startValue;
   state.filters.endDate = endValue;
+}
+
+function dashboardFilterSnapshot() {
+  return {
+    type: state.filters.type,
+    location: state.filters.location,
+    category: state.filters.category,
+    scores: [...state.filters.scores],
+    query: state.filters.query,
+    startDate: state.filters.startDate,
+    endDate: state.filters.endDate,
+    onlyVerified: state.filters.onlyVerified,
+    onlyWithActivity: state.filters.onlyWithActivity,
+    onlyWithOpenRequest: state.filters.onlyWithOpenRequest,
+    onlyUnseen: state.filters.onlyUnseen,
+  };
+}
+
+function saveDashboardFilters() {
+  if (document.body && document.body.classList.contains("detail-page")) return;
+  try {
+    window.sessionStorage.setItem(DASHBOARD_FILTER_STORAGE_KEY, JSON.stringify(dashboardFilterSnapshot()));
+  } catch (_) {
+    // Session storage may be unavailable in strict browser modes.
+  }
+}
+
+function restoreDashboardFilters() {
+  try {
+    const raw = window.sessionStorage.getItem(DASHBOARD_FILTER_STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== "object") return false;
+
+    state.filters.type = normalize(saved.type) || "all";
+    state.filters.location = normalize(saved.location) || "all";
+    state.filters.category = normalize(saved.category) || "all";
+    state.filters.scores = new Set(Array.isArray(saved.scores) ? saved.scores.map((v) => normalize(v)).filter(Boolean) : []);
+    state.filters.query = normalize(saved.query);
+    state.filters.startDate = normalize(saved.startDate) || state.filters.startDate;
+    state.filters.endDate = normalize(saved.endDate) || state.filters.endDate;
+    state.filters.onlyVerified = !!saved.onlyVerified;
+    state.filters.onlyWithActivity = !!saved.onlyWithActivity;
+    state.filters.onlyWithOpenRequest = !!saved.onlyWithOpenRequest;
+    state.filters.onlyUnseen = !!saved.onlyUnseen;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function syncQuickDateButtons() {
+  clearDateRangeQuickSelection();
+  const start = parseDateInputValue(state.filters.startDate);
+  const end = parseDateInputValue(state.filters.endDate);
+  if (!start || !end) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (start.getTime() === today.getTime() && end.getTime() === today.getTime()) {
+    const btn = document.querySelector('.date-range-btn[data-days="1"]');
+    if (btn) btn.classList.add("active");
+    return;
+  }
+  if (start.getTime() === yesterday.getTime() && end.getTime() === yesterday.getTime()) {
+    const btn = document.querySelector('.date-range-btn[data-yesterday="true"]');
+    if (btn) btn.classList.add("active");
+    return;
+  }
+
+  [7, 14, 30].some((days) => {
+    const expectedStart = new Date(today);
+    expectedStart.setDate(expectedStart.getDate() - (days - 1));
+    if (start.getTime() === expectedStart.getTime() && end.getTime() === today.getTime()) {
+      const btn = document.querySelector(`.date-range-btn[data-days="${days}"]`);
+      if (btn) btn.classList.add("active");
+      return true;
+    }
+    return false;
+  });
+}
+
+function syncFilterControls() {
+  const startEl = document.getElementById("startDate");
+  const endEl = document.getElementById("endDate");
+  const searchEl = document.getElementById("liveSearch");
+  if (startEl) startEl.value = state.filters.startDate;
+  if (endEl) endEl.value = state.filters.endDate;
+  if (searchEl) searchEl.value = state.filters.query;
+
+  document.querySelectorAll('.filter-btn[data-filter-group="type"]').forEach((btn) => {
+    btn.classList.toggle("active", normalize(btn.getAttribute("data-value")) === state.filters.type);
+  });
+  document.querySelectorAll('.filter-btn[data-filter-group="location"]').forEach((btn) => {
+    btn.classList.toggle("active", normalize(btn.getAttribute("data-value")) === state.filters.location);
+  });
+  document.querySelectorAll('.filter-btn[data-filter-group="category"]').forEach((btn) => {
+    btn.classList.toggle("active", normalize(btn.getAttribute("data-value")) === state.filters.category);
+  });
+  document.querySelectorAll('.filter-btn[data-filter-group="score"]').forEach((btn) => {
+    const value = normalize(btn.getAttribute("data-value"));
+    btn.classList.toggle("active", value === "all" ? state.filters.scores.size === 0 : state.filters.scores.has(value));
+  });
+
+  updateSearchPresetButtons();
+  const verifiedBtn = document.getElementById("verifiedFilterBtn");
+  const activityBtn = document.getElementById("activityFilterBtn");
+  const approvalBtn = document.getElementById("approvalRequestFilterBtn");
+  const unseenBtn = document.getElementById("unseenFilterBtn");
+  if (verifiedBtn) verifiedBtn.classList.toggle("active", state.filters.onlyVerified);
+  if (activityBtn) activityBtn.classList.toggle("active", state.filters.onlyWithActivity);
+  if (approvalBtn) approvalBtn.classList.toggle("active", state.filters.onlyWithOpenRequest);
+  if (unseenBtn) unseenBtn.classList.toggle("active", state.filters.onlyUnseen);
+  syncQuickDateButtons();
 }
 
 function parseDisplayDate(value) {
@@ -1792,13 +1900,18 @@ function renderPublicCardActions(project) {
 
 function renderCard(project) {
   const view = project._effectiveData || project;
+  const isDetailPage = document.body && document.body.classList.contains("detail-page");
   const isUsa = project._market === "usa";
   const scoreClass = scoreBadgeClass(Math.max(project._effectiveScore, 0));
+  const titleDetailUrl = isDetailPage ? "" : detailPageUrl(project);
 
   const nummer = esc(normalize(view.csv_project_no || view.id) || "-");
   const datum = esc(parseDisplayDate(fieldDate(view)));
   const abgabefrist = esc(parseDisplayDate(fieldDeadline(view)));
   const titel = esc(normalize(fieldTitle(view)) || "-");
+  const titleHtml = titleDetailUrl
+    ? `<a class="card-title-link" href="${esc(titleDetailUrl)}">${titel}</a>`
+    : titel;
   const kurzbeschreibung = esc(normalize(fieldSummary(view)) || "-").replace(/\n/g, "<br>");
 
   const lageText = normalize(fieldLocation(view)) || "-";
@@ -1868,7 +1981,7 @@ function renderCard(project) {
       <header class="project-head">
         <div class="score-pill ${scoreClass}">${esc(project._effectiveScoreRaw)}</div>
         <div class="head-main">
-          <h2>${titel}</h2>
+          <h2>${titleHtml}</h2>
           <div class="head-grid">
             <p><strong>Number:</strong> ${nummer}</p>
             <p><strong>${esc(labels.date)}:</strong> ${datum}</p>
@@ -2054,6 +2167,7 @@ function handleFilterButtonClick(btn) {
     activateSingleSelectFilter(group, value, btn);
   }
 
+  saveDashboardFilters();
   refreshUI();
 }
 
@@ -2557,81 +2671,22 @@ async function deleteFieldEdit(fieldEditId, tenderKey) {
   });
 }
 
-function bindUi() {
-  document.getElementById("authToggleBtn").addEventListener("click", () => {
+function bindAuthPanelToggle() {
+  const authToggleBtn = document.getElementById("authToggleBtn");
+  if (!authToggleBtn || authToggleBtn.getAttribute("data-auth-toggle-bound") === "1") return;
+  authToggleBtn.setAttribute("data-auth-toggle-bound", "1");
+  authToggleBtn.addEventListener("click", () => {
     state.ui.authCollapsed = !state.ui.authCollapsed;
     applyAuthPanelVisibility();
   });
+}
 
-  document.getElementById("liveSearch").addEventListener("input", (e) => {
-    state.filters.query = normalizeKeywordText(e.target.value);
-    updateSearchPresetButtons();
-    refreshUI();
-  });
+function bindCardInteractions() {
+  const cardsPool = document.getElementById("cardsPool");
+  if (!cardsPool || cardsPool.getAttribute("data-card-bindings") === "1") return;
+  cardsPool.setAttribute("data-card-bindings", "1");
 
-  document.getElementById("startDate").addEventListener("change", async (e) => {
-    clearDateRangeQuickSelection();
-    state.filters.startDate = normalize(e.target.value);
-    await ensureRowsForCurrentDateRange();
-  });
-
-  document.getElementById("endDate").addEventListener("change", async (e) => {
-    clearDateRangeQuickSelection();
-    state.filters.endDate = normalize(e.target.value);
-    await ensureRowsForCurrentDateRange();
-  });
-
-  document.querySelectorAll(".date-range-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      if (btn.getAttribute("data-yesterday") === "true") {
-        const yesterday = new Date();
-        yesterday.setHours(0, 0, 0, 0);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const val = formatDateInput(yesterday);
-        document.getElementById("startDate").value = val;
-        document.getElementById("endDate").value = val;
-        state.filters.startDate = val;
-        state.filters.endDate = val;
-      } else {
-        const days = Number.parseInt(btn.getAttribute("data-days") || "", 10);
-        applyQuickDateRange(days);
-      }
-      clearDateRangeQuickSelection();
-      btn.classList.add("active");
-      await ensureRowsForCurrentDateRange();
-    });
-  });
-
-  bindFilterButtons();
-
-  document.getElementById("verifiedFilterBtn").addEventListener("click", (e) => {
-    state.filters.onlyVerified = !state.filters.onlyVerified;
-    e.currentTarget.classList.toggle("active", state.filters.onlyVerified);
-    refreshUI();
-  });
-
-  document.getElementById("activityFilterBtn").addEventListener("click", (e) => {
-    state.filters.onlyWithActivity = !state.filters.onlyWithActivity;
-    e.currentTarget.classList.toggle("active", state.filters.onlyWithActivity);
-    refreshUI();
-  });
-
-  document.getElementById("approvalRequestFilterBtn").addEventListener("click", (e) => {
-    state.filters.onlyWithOpenRequest = !state.filters.onlyWithOpenRequest;
-    e.currentTarget.classList.toggle("active", state.filters.onlyWithOpenRequest);
-    refreshUI();
-  });
-
-  const unseenFilterBtn = document.getElementById("unseenFilterBtn");
-  if (unseenFilterBtn) {
-    unseenFilterBtn.addEventListener("click", (e) => {
-      state.filters.onlyUnseen = !state.filters.onlyUnseen;
-      e.currentTarget.classList.toggle("active", state.filters.onlyUnseen);
-      refreshUI();
-    });
-  }
-
-  document.getElementById("cardsPool").addEventListener("submit", async (e) => {
+  cardsPool.addEventListener("submit", async (e) => {
     const form = e.target;
     if (!(form instanceof HTMLFormElement)) return;
     if (form.getAttribute("data-busy") === "1") {
@@ -2678,11 +2733,13 @@ function bindUi() {
     }
   });
 
-  document.getElementById("cardsPool").addEventListener("click", async (e) => {
+  cardsPool.addEventListener("click", async (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     const clickedButton = target.closest("button");
-    if (!(clickedButton instanceof HTMLButtonElement)) return;
+    if (!(clickedButton instanceof HTMLButtonElement)) {
+      return;
+    }
     if (clickedButton.disabled) return;
 
     const action = normalize(clickedButton.getAttribute("data-action"));
@@ -2797,6 +2854,88 @@ function bindUi() {
   });
 }
 
+function bindUi() {
+  bindAuthPanelToggle();
+
+  document.getElementById("liveSearch").addEventListener("input", (e) => {
+    state.filters.query = normalizeKeywordText(e.target.value);
+    updateSearchPresetButtons();
+    saveDashboardFilters();
+    refreshUI();
+  });
+
+  document.getElementById("startDate").addEventListener("change", async (e) => {
+    clearDateRangeQuickSelection();
+    state.filters.startDate = normalize(e.target.value);
+    saveDashboardFilters();
+    await ensureRowsForCurrentDateRange();
+  });
+
+  document.getElementById("endDate").addEventListener("change", async (e) => {
+    clearDateRangeQuickSelection();
+    state.filters.endDate = normalize(e.target.value);
+    saveDashboardFilters();
+    await ensureRowsForCurrentDateRange();
+  });
+
+  document.querySelectorAll(".date-range-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (btn.getAttribute("data-yesterday") === "true") {
+        const yesterday = new Date();
+        yesterday.setHours(0, 0, 0, 0);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const val = formatDateInput(yesterday);
+        document.getElementById("startDate").value = val;
+        document.getElementById("endDate").value = val;
+        state.filters.startDate = val;
+        state.filters.endDate = val;
+      } else {
+        const days = Number.parseInt(btn.getAttribute("data-days") || "", 10);
+        applyQuickDateRange(days);
+      }
+      clearDateRangeQuickSelection();
+      btn.classList.add("active");
+      saveDashboardFilters();
+      await ensureRowsForCurrentDateRange();
+    });
+  });
+
+  bindFilterButtons();
+
+  document.getElementById("verifiedFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyVerified = !state.filters.onlyVerified;
+    e.currentTarget.classList.toggle("active", state.filters.onlyVerified);
+    saveDashboardFilters();
+    refreshUI();
+  });
+
+  document.getElementById("activityFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyWithActivity = !state.filters.onlyWithActivity;
+    e.currentTarget.classList.toggle("active", state.filters.onlyWithActivity);
+    saveDashboardFilters();
+    refreshUI();
+  });
+
+  document.getElementById("approvalRequestFilterBtn").addEventListener("click", (e) => {
+    state.filters.onlyWithOpenRequest = !state.filters.onlyWithOpenRequest;
+    e.currentTarget.classList.toggle("active", state.filters.onlyWithOpenRequest);
+    saveDashboardFilters();
+    refreshUI();
+  });
+
+  const unseenFilterBtn = document.getElementById("unseenFilterBtn");
+  if (unseenFilterBtn) {
+    unseenFilterBtn.addEventListener("click", (e) => {
+      state.filters.onlyUnseen = !state.filters.onlyUnseen;
+      e.currentTarget.classList.toggle("active", state.filters.onlyUnseen);
+      saveDashboardFilters();
+      refreshUI();
+    });
+  }
+
+  bindCardInteractions();
+}
+
 function initializeDateInputs() {
   const today = formatDateInput(new Date());
 
@@ -2820,12 +2959,12 @@ async function loadJsonData() {
   try {
     const warnings = [];
     initializeDateInputs();
+    restoreDashboardFilters();
     if (!state.data.hasBoundUi) {
       bindUi();
       state.data.hasBoundUi = true;
     }
-    await loadManifest(warnings);
-    applyLatestAvailableDateIfTodayIsEmpty();
+    syncFilterControls();
     await ensureRowsForCurrentDateRange({ warnings, loadRemote: false });
 
     status.textContent = `JSON loaded: ${state.rows.length} rows for the selected date range.`;
@@ -2834,6 +2973,74 @@ async function loadJsonData() {
     status.textContent = "JSON load failed.";
     warningsEl.textContent = String(err && err.message ? err.message : err);
     document.getElementById("cardsPool").innerHTML = "<p>Data could not be loaded. Check JSON output indexes.</p>";
+  }
+}
+
+function dataSourceForFolder(folder) {
+  return DATA_SOURCES.find((source) => source.folder === folder) || null;
+}
+
+function detailParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    folder: normalize(params.get("folder")),
+    date: normalize(params.get("date")),
+    id: normalize(params.get("id")),
+  };
+}
+
+function rowMatchesDetailId(row, requestedId) {
+  const id = normalize(requestedId);
+  if (!id) return false;
+  const jsonRecordId = normalize(row._record_id);
+  const fromJsonFile = normalize(row._json_file).replace(/^[0-9]{6}_/, "").replace(/\.json$/i, "");
+  return [
+    normalize(row.id),
+    normalize(row.csv_project_no),
+    jsonRecordId,
+    fromJsonFile,
+  ].some((candidate) => candidate === id);
+}
+
+async function loadDetailData() {
+  const status = document.getElementById("loadStatus");
+  const warningsEl = document.getElementById("loadWarnings");
+  const detailMeta = document.getElementById("detailMeta");
+  const cardsPool = document.getElementById("cardsPool");
+
+  try {
+    const warnings = [];
+    const params = detailParams();
+    const source = dataSourceForFolder(params.folder);
+    if (!source || !/^[0-9]{6}$/.test(params.date) || !params.id) {
+      throw new Error("The detail link is missing a valid folder, date, or id parameter.");
+    }
+
+    if (detailMeta) detailMeta.textContent = `${params.folder} / ${params.date} / ${params.id}`;
+    const url = dailyIndexUrl(source, params.date);
+    if (status) status.textContent = `Loading ${url}...`;
+    if (!state.data.hasBoundUi) {
+      bindAuthPanelToggle();
+      bindCardInteractions();
+      state.data.hasBoundUi = true;
+    }
+
+    const payload = await fetchJsonIndex(url, warnings);
+    const rows = parseJsonIndexRows(payload, source.sourceType, source.market);
+    const row = rows.find((candidate) => rowMatchesDetailId(candidate, params.id));
+    if (!row) {
+      throw new Error(`No entry with id ${params.id} was found in ${url}.`);
+    }
+
+    mergeRows([row]);
+    document.title = `${normalize(fieldTitle(row)) || params.id} - Tender Detail`;
+    refreshUI();
+    if (status) status.textContent = "Tender loaded.";
+    if (warningsEl) warningsEl.innerHTML = warnings.map((w) => `<div>${esc(w)}</div>`).join("");
+  } catch (err) {
+    if (status) status.textContent = "Tender could not be loaded.";
+    if (warningsEl) warningsEl.textContent = String(err && err.message ? err.message : err);
+    if (cardsPool) cardsPool.innerHTML = "<p>Detail entry could not be loaded.</p>";
   }
 }
 
@@ -2975,7 +3182,11 @@ async function initAuthFlow() {
 
 async function bootstrap() {
   applyDashboardGate();
-  await loadJsonData();
+  if (document.body && document.body.classList.contains("detail-page")) {
+    await loadDetailData();
+  } else {
+    await loadJsonData();
+  }
   await initAuthFlow();
 }
 
