@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T10:04:01",
+  "generated_at": "2026-07-23T10:03:49",
   "index_type": "daily_manifest",
   "dates": [
     "260319",
@@ -89,6 +89,60 @@
     "260722"
   ],
   "folders": {
+    "Agent_1": {
+      "260319": {
+        "count": 1,
+        "index": "Agent_1/_indexes/260319.json"
+      },
+      "260707": {
+        "count": 1171,
+        "index": "Agent_1/_indexes/260707.json"
+      },
+      "260708": {
+        "count": 1362,
+        "index": "Agent_1/_indexes/260708.json"
+      },
+      "260709": {
+        "count": 1292,
+        "index": "Agent_1/_indexes/260709.json"
+      },
+      "260710": {
+        "count": 1298,
+        "index": "Agent_1/_indexes/260710.json"
+      },
+      "260713": {
+        "count": 1515,
+        "index": "Agent_1/_indexes/260713.json"
+      },
+      "260714": {
+        "count": 1218,
+        "index": "Agent_1/_indexes/260714.json"
+      },
+      "260715": {
+        "count": 1140,
+        "index": "Agent_1/_indexes/260715.json"
+      },
+      "260716": {
+        "count": 1188,
+        "index": "Agent_1/_indexes/260716.json"
+      },
+      "260717": {
+        "count": 1273,
+        "index": "Agent_1/_indexes/260717.json"
+      },
+      "260720": {
+        "count": 1405,
+        "index": "Agent_1/_indexes/260720.json"
+      },
+      "260721": {
+        "count": 1166,
+        "index": "Agent_1/_indexes/260721.json"
+      },
+      "260722": {
+        "count": 1195,
+        "index": "Agent_1/_indexes/260722.json"
+      }
+    },
     "Agent_2": {
       "260319": {
         "count": 1,

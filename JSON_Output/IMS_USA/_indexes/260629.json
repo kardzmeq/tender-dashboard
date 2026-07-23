@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T10:03:56",
+  "generated_at": "2026-07-23T10:03:48",
   "folder": "IMS_USA",
   "index_type": "daily_slim",
   "date_prefix": "260629",
@@ -31,8 +31,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014163",
       "_json_file": "260722_1014163.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 10980
+      "_json_mtime_ns": 1784734809776281600,
+      "_json_size": 10901
     },
     {
       "run_date": "2026-06-29",
@@ -59,8 +59,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014164",
       "_json_file": "260722_1014164.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 14388
+      "_json_mtime_ns": 1784734809748662000,
+      "_json_size": 14310
     },
     {
       "run_date": "2026-06-29",
@@ -89,8 +89,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014165",
       "_json_file": "260722_1014165.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 13371
+      "_json_mtime_ns": 1784734809724186700,
+      "_json_size": 13292
     },
     {
       "run_date": "2026-06-29",
@@ -118,8 +118,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014172",
       "_json_file": "260722_1014172.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 11135
+      "_json_mtime_ns": 1784734809692263700,
+      "_json_size": 11056
     },
     {
       "run_date": "2026-06-29",
@@ -147,8 +147,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014173",
       "_json_file": "260722_1014173.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 10923
+      "_json_mtime_ns": 1784734809649076100,
+      "_json_size": 10844
     },
     {
       "run_date": "2026-06-29",
@@ -176,8 +176,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014179",
       "_json_file": "260722_1014179.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 10951
+      "_json_mtime_ns": 1784734809623109700,
+      "_json_size": 10872
     },
     {
       "run_date": "2026-06-29",
@@ -203,8 +203,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014194",
       "_json_file": "260722_1014194.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 10316
+      "_json_mtime_ns": 1784734809600193000,
+      "_json_size": 10238
     },
     {
       "run_date": "2026-06-29",
@@ -232,8 +232,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014207",
       "_json_file": "260722_1014207.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 9972
+      "_json_mtime_ns": 1784734809576318600,
+      "_json_size": 9893
     },
     {
       "run_date": "2026-06-29",
@@ -262,8 +262,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014211",
       "_json_file": "260722_1014211.json",
-      "_json_mtime_ns": 1784791905687797800,
-      "_json_size": 14039
+      "_json_mtime_ns": 1784734809554784200,
+      "_json_size": 13960
     },
     {
       "run_date": "2026-06-29",
@@ -290,8 +290,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014226",
       "_json_file": "260722_1014226.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 12433
+      "_json_mtime_ns": 1784734809537079400,
+      "_json_size": 12355
     },
     {
       "run_date": "2026-06-29",
@@ -320,8 +320,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014231",
       "_json_file": "260722_1014231.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 14464
+      "_json_mtime_ns": 1784734809520490500,
+      "_json_size": 14385
     },
     {
       "run_date": "2026-06-29",
@@ -350,8 +350,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014248",
       "_json_file": "260722_1014248.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 12735
+      "_json_mtime_ns": 1784734809501486600,
+      "_json_size": 12656
     },
     {
       "run_date": "2026-06-29",
@@ -380,8 +380,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014249",
       "_json_file": "260722_1014249.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 12475
+      "_json_mtime_ns": 1784734809470961000,
+      "_json_size": 12396
     },
     {
       "run_date": "2026-06-29",
@@ -407,8 +407,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014250",
       "_json_file": "260722_1014250.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 13692
+      "_json_mtime_ns": 1784734809439394900,
+      "_json_size": 13614
     },
     {
       "run_date": "2026-06-29",
@@ -436,8 +436,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014253",
       "_json_file": "260722_1014253.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 14303
+      "_json_mtime_ns": 1784734809408341100,
+      "_json_size": 14224
     },
     {
       "run_date": "2026-06-29",
@@ -466,8 +466,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014254",
       "_json_file": "260722_1014254.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 10342
+      "_json_mtime_ns": 1784734809380536800,
+      "_json_size": 10263
     },
     {
       "run_date": "2026-06-29",
@@ -493,8 +493,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014269",
       "_json_file": "260722_1014269.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 13627
+      "_json_mtime_ns": 1784734809354399400,
+      "_json_size": 13549
     },
     {
       "run_date": "2026-06-29",
@@ -521,8 +521,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014270",
       "_json_file": "260722_1014270.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 10924
+      "_json_mtime_ns": 1784734809338147100,
+      "_json_size": 10846
     },
     {
       "run_date": "2026-06-29",
@@ -549,8 +549,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014271",
       "_json_file": "260722_1014271.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 12386
+      "_json_mtime_ns": 1784734809320677400,
+      "_json_size": 12308
     },
     {
       "run_date": "2026-06-29",
@@ -576,8 +576,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014272",
       "_json_file": "260722_1014272.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 11549
+      "_json_mtime_ns": 1784734809303902700,
+      "_json_size": 11471
     },
     {
       "run_date": "2026-06-29",
@@ -605,8 +605,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014280",
       "_json_file": "260722_1014280.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 13922
+      "_json_mtime_ns": 1784734809286822500,
+      "_json_size": 13843
     },
     {
       "run_date": "2026-06-29",
@@ -633,8 +633,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014285",
       "_json_file": "260722_1014285.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 9221
+      "_json_mtime_ns": 1784734809267857100,
+      "_json_size": 9142
     },
     {
       "run_date": "2026-06-29",
@@ -663,8 +663,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014291",
       "_json_file": "260722_1014291.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 10156
+      "_json_mtime_ns": 1784734809243628900,
+      "_json_size": 10077
     },
     {
       "run_date": "2026-06-29",
@@ -690,8 +690,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014292",
       "_json_file": "260722_1014292.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 10606
+      "_json_mtime_ns": 1784734809226031200,
+      "_json_size": 10528
     },
     {
       "run_date": "2026-06-29",
@@ -717,8 +717,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014293",
       "_json_file": "260722_1014293.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 13282
+      "_json_mtime_ns": 1784734809210809700,
+      "_json_size": 13204
     },
     {
       "run_date": "2026-06-29",
@@ -747,8 +747,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014295",
       "_json_file": "260722_1014295.json",
-      "_json_mtime_ns": 1784791905703489600,
-      "_json_size": 13204
+      "_json_mtime_ns": 1784734809194353200,
+      "_json_size": 13125
     },
     {
       "run_date": "2026-06-29",
@@ -776,8 +776,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014298",
       "_json_file": "260722_1014298.json",
-      "_json_mtime_ns": 1784791905714589800,
-      "_json_size": 11270
+      "_json_mtime_ns": 1784734809171734500,
+      "_json_size": 11191
     },
     {
       "run_date": "2026-06-29",
@@ -803,8 +803,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014301",
       "_json_file": "260722_1014301.json",
-      "_json_mtime_ns": 1784791905714589800,
-      "_json_size": 14545
+      "_json_mtime_ns": 1784734809148765700,
+      "_json_size": 14467
     },
     {
       "run_date": "2026-06-29",
@@ -832,8 +832,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014335",
       "_json_file": "260722_1014335.json",
-      "_json_mtime_ns": 1784791905715591900,
-      "_json_size": 12037
+      "_json_mtime_ns": 1784734809116340700,
+      "_json_size": 11958
     },
     {
       "run_date": "2026-06-29",
@@ -862,8 +862,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014336",
       "_json_file": "260722_1014336.json",
-      "_json_mtime_ns": 1784791905716591700,
-      "_json_size": 13682
+      "_json_mtime_ns": 1784734809084189200,
+      "_json_size": 13603
     },
     {
       "run_date": "2026-06-29",
@@ -890,8 +890,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014339",
       "_json_file": "260722_1014339.json",
-      "_json_mtime_ns": 1784791905717590600,
-      "_json_size": 13173
+      "_json_mtime_ns": 1784734809057573600,
+      "_json_size": 13095
     },
     {
       "run_date": "2026-06-29",
@@ -918,8 +918,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014344",
       "_json_file": "260722_1014344.json",
-      "_json_mtime_ns": 1784791905717590600,
-      "_json_size": 10131
+      "_json_mtime_ns": 1784734809033616400,
+      "_json_size": 10053
     },
     {
       "run_date": "2026-06-29",
@@ -946,8 +946,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014345",
       "_json_file": "260722_1014345.json",
-      "_json_mtime_ns": 1784791905718590700,
-      "_json_size": 11634
+      "_json_mtime_ns": 1784734809015324400,
+      "_json_size": 11556
     },
     {
       "run_date": "2026-06-29",
@@ -975,8 +975,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014348",
       "_json_file": "260722_1014348.json",
-      "_json_mtime_ns": 1784791905719591200,
-      "_json_size": 12349
+      "_json_mtime_ns": 1784734808995735500,
+      "_json_size": 12270
     },
     {
       "run_date": "2026-06-29",
@@ -1003,8 +1003,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014351",
       "_json_file": "260722_1014351.json",
-      "_json_mtime_ns": 1784791905719591200,
-      "_json_size": 12566
+      "_json_mtime_ns": 1784734808975288700,
+      "_json_size": 12487
     },
     {
       "run_date": "2026-06-29",
@@ -1031,8 +1031,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014353",
       "_json_file": "260722_1014353.json",
-      "_json_mtime_ns": 1784791905720591400,
-      "_json_size": 11209
+      "_json_mtime_ns": 1784734808954009900,
+      "_json_size": 11130
     },
     {
       "run_date": "2026-06-29",
@@ -1061,8 +1061,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014357",
       "_json_file": "260722_1014357.json",
-      "_json_mtime_ns": 1784791905721591100,
-      "_json_size": 10819
+      "_json_mtime_ns": 1784734808935963700,
+      "_json_size": 10740
     },
     {
       "run_date": "2026-06-29",
@@ -1089,8 +1089,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014361",
       "_json_file": "260722_1014361.json",
-      "_json_mtime_ns": 1784791905721591100,
-      "_json_size": 11642
+      "_json_mtime_ns": 1784734808907132500,
+      "_json_size": 11564
     },
     {
       "run_date": "2026-06-29",
@@ -1119,8 +1119,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014363",
       "_json_file": "260722_1014363.json",
-      "_json_mtime_ns": 1784791905722595500,
-      "_json_size": 13276
+      "_json_mtime_ns": 1784734808885861800,
+      "_json_size": 13197
     },
     {
       "run_date": "2026-06-29",
@@ -1149,8 +1149,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014368",
       "_json_file": "260722_1014368.json",
-      "_json_mtime_ns": 1784791905722595500,
-      "_json_size": 12986
+      "_json_mtime_ns": 1784734808869246400,
+      "_json_size": 12907
     },
     {
       "run_date": "2026-06-29",
@@ -1179,8 +1179,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014369",
       "_json_file": "260722_1014369.json",
-      "_json_mtime_ns": 1784791905723879700,
-      "_json_size": 12604
+      "_json_mtime_ns": 1784734808853214300,
+      "_json_size": 12525
     },
     {
       "run_date": "2026-06-29",
@@ -1209,8 +1209,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014380",
       "_json_file": "260722_1014380.json",
-      "_json_mtime_ns": 1784791905723879700,
-      "_json_size": 12198
+      "_json_mtime_ns": 1784734808835682900,
+      "_json_size": 12119
     },
     {
       "run_date": "2026-06-29",
@@ -1240,8 +1240,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014382",
       "_json_file": "260722_1014382.json",
-      "_json_mtime_ns": 1784791905724883200,
-      "_json_size": 14968
+      "_json_mtime_ns": 1784734808819646600,
+      "_json_size": 14888
     },
     {
       "run_date": "2026-06-29",
@@ -1270,8 +1270,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014383",
       "_json_file": "260722_1014383.json",
-      "_json_mtime_ns": 1784791905725879800,
-      "_json_size": 12933
+      "_json_mtime_ns": 1784734808805151200,
+      "_json_size": 12854
     },
     {
       "run_date": "2026-06-29",
@@ -1297,8 +1297,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014384",
       "_json_file": "260722_1014384.json",
-      "_json_mtime_ns": 1784791905725879800,
-      "_json_size": 9926
+      "_json_mtime_ns": 1784734808785587000,
+      "_json_size": 9848
     },
     {
       "run_date": "2026-06-29",
@@ -1327,8 +1327,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014385",
       "_json_file": "260722_1014385.json",
-      "_json_mtime_ns": 1784791905726879700,
-      "_json_size": 11926
+      "_json_mtime_ns": 1784734808767985700,
+      "_json_size": 11847
     },
     {
       "run_date": "2026-06-29",
@@ -1355,8 +1355,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014386",
       "_json_file": "260722_1014386.json",
-      "_json_mtime_ns": 1784791905727879900,
-      "_json_size": 12746
+      "_json_mtime_ns": 1784734808744848300,
+      "_json_size": 12668
     },
     {
       "run_date": "2026-06-29",
@@ -1384,8 +1384,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014389",
       "_json_file": "260722_1014389.json",
-      "_json_mtime_ns": 1784791905727879900,
-      "_json_size": 10350
+      "_json_mtime_ns": 1784734808713088600,
+      "_json_size": 10271
     },
     {
       "run_date": "2026-06-29",
@@ -1413,8 +1413,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014391",
       "_json_file": "260722_1014391.json",
-      "_json_mtime_ns": 1784791905728880400,
-      "_json_size": 14118
+      "_json_mtime_ns": 1784734808683381800,
+      "_json_size": 14039
     },
     {
       "run_date": "2026-06-29",
@@ -1441,8 +1441,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014395",
       "_json_file": "260722_1014395.json",
-      "_json_mtime_ns": 1784791905729648900,
-      "_json_size": 13696
+      "_json_mtime_ns": 1784734808648893700,
+      "_json_size": 13618
     },
     {
       "run_date": "2026-06-29",
@@ -1469,8 +1469,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014397",
       "_json_file": "260722_1014397.json",
-      "_json_mtime_ns": 1784791905730240600,
-      "_json_size": 12830
+      "_json_mtime_ns": 1784734808629266300,
+      "_json_size": 12752
     },
     {
       "run_date": "2026-06-29",
@@ -1498,8 +1498,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014398",
       "_json_file": "260722_1014398.json",
-      "_json_mtime_ns": 1784791905731504100,
-      "_json_size": 11135
+      "_json_mtime_ns": 1784734808612702300,
+      "_json_size": 11056
     },
     {
       "run_date": "2026-06-29",
@@ -1528,8 +1528,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014399",
       "_json_file": "260722_1014399.json",
-      "_json_mtime_ns": 1784791905731905500,
-      "_json_size": 12351
+      "_json_mtime_ns": 1784734808593578400,
+      "_json_size": 12272
     },
     {
       "run_date": "2026-06-29",
@@ -1557,8 +1557,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014400",
       "_json_file": "260722_1014400.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 11630
+      "_json_mtime_ns": 1784734808574588400,
+      "_json_size": 11551
     },
     {
       "run_date": "2026-06-29",
@@ -1585,8 +1585,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014403",
       "_json_file": "260722_1014403.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 14420
+      "_json_mtime_ns": 1784734808552473200,
+      "_json_size": 14342
     },
     {
       "run_date": "2026-06-29",
@@ -1615,8 +1615,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014405",
       "_json_file": "260722_1014405.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 16157
+      "_json_mtime_ns": 1784734808528085400,
+      "_json_size": 16078
     },
     {
       "run_date": "2026-06-29",
@@ -1643,8 +1643,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014406",
       "_json_file": "260722_1014406.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 17250
+      "_json_mtime_ns": 1784734808511572100,
+      "_json_size": 17172
     },
     {
       "run_date": "2026-06-29",
@@ -1671,8 +1671,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014407",
       "_json_file": "260722_1014407.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 12633
+      "_json_mtime_ns": 1784734808490863300,
+      "_json_size": 12555
     },
     {
       "run_date": "2026-06-29",
@@ -1698,8 +1698,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014412",
       "_json_file": "260722_1014412.json",
-      "_json_mtime_ns": 1784791905732658100,
-      "_json_size": 14320
+      "_json_mtime_ns": 1784734808470798700,
+      "_json_size": 14242
     },
     {
       "run_date": "2026-06-29",
@@ -1725,8 +1725,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014413",
       "_json_file": "260722_1014413.json",
-      "_json_mtime_ns": 1784791905737052000,
-      "_json_size": 12690
+      "_json_mtime_ns": 1784734808455815100,
+      "_json_size": 12612
     },
     {
       "run_date": "2026-06-29",
@@ -1754,8 +1754,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014415",
       "_json_file": "260722_1014415.json",
-      "_json_mtime_ns": 1784791905737052000,
-      "_json_size": 13581
+      "_json_mtime_ns": 1784734808424476900,
+      "_json_size": 13502
     },
     {
       "run_date": "2026-06-29",
@@ -1784,8 +1784,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014417",
       "_json_file": "260722_1014417.json",
-      "_json_mtime_ns": 1784791905737052000,
-      "_json_size": 16929
+      "_json_mtime_ns": 1784734808403239100,
+      "_json_size": 16850
     },
     {
       "run_date": "2026-06-29",
@@ -1812,8 +1812,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014418",
       "_json_file": "260722_1014418.json",
-      "_json_mtime_ns": 1784791905737052000,
-      "_json_size": 13826
+      "_json_mtime_ns": 1784734808382980300,
+      "_json_size": 13748
     },
     {
       "run_date": "2026-06-29",
@@ -1840,8 +1840,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014419",
       "_json_file": "260722_1014419.json",
-      "_json_mtime_ns": 1784791905739422300,
-      "_json_size": 12057
+      "_json_mtime_ns": 1784734808367524700,
+      "_json_size": 11979
     },
     {
       "run_date": "2026-06-29",
@@ -1868,8 +1868,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014421",
       "_json_file": "260722_1014421.json",
-      "_json_mtime_ns": 1784791905740428500,
-      "_json_size": 13483
+      "_json_mtime_ns": 1784734808338530000,
+      "_json_size": 13405
     },
     {
       "run_date": "2026-06-29",
@@ -1896,8 +1896,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014423",
       "_json_file": "260722_1014423.json",
-      "_json_mtime_ns": 1784791905740428500,
-      "_json_size": 15745
+      "_json_mtime_ns": 1784734808293640700,
+      "_json_size": 15667
     },
     {
       "run_date": "2026-06-29",
@@ -1926,8 +1926,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014424",
       "_json_file": "260722_1014424.json",
-      "_json_mtime_ns": 1784791905741428300,
-      "_json_size": 11602
+      "_json_mtime_ns": 1784734808257038800,
+      "_json_size": 11523
     },
     {
       "run_date": "2026-06-29",
@@ -1954,8 +1954,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014426",
       "_json_file": "260722_1014426.json",
-      "_json_mtime_ns": 1784791905742428100,
-      "_json_size": 13054
+      "_json_mtime_ns": 1784734808223446900,
+      "_json_size": 12976
     },
     {
       "run_date": "2026-06-29",
@@ -1981,8 +1981,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014427",
       "_json_file": "260722_1014427.json",
-      "_json_mtime_ns": 1784791905742428100,
-      "_json_size": 11120
+      "_json_mtime_ns": 1784734808202807800,
+      "_json_size": 11042
     },
     {
       "run_date": "2026-06-29",
@@ -2009,8 +2009,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014429",
       "_json_file": "260722_1014429.json",
-      "_json_mtime_ns": 1784791905743427500,
-      "_json_size": 13745
+      "_json_mtime_ns": 1784734808175667200,
+      "_json_size": 13667
     },
     {
       "run_date": "2026-06-29",
@@ -2039,8 +2039,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014431",
       "_json_file": "260722_1014431.json",
-      "_json_mtime_ns": 1784791905744429000,
-      "_json_size": 12245
+      "_json_mtime_ns": 1784734808143509900,
+      "_json_size": 12166
     },
     {
       "run_date": "2026-06-29",
@@ -2067,8 +2067,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014432",
       "_json_file": "260722_1014432.json",
-      "_json_mtime_ns": 1784791905744429000,
-      "_json_size": 14693
+      "_json_mtime_ns": 1784734808104670900,
+      "_json_size": 14615
     },
     {
       "run_date": "2026-06-29",
@@ -2097,8 +2097,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014433",
       "_json_file": "260722_1014433.json",
-      "_json_mtime_ns": 1784791905745427900,
-      "_json_size": 14599
+      "_json_mtime_ns": 1784734808069055700,
+      "_json_size": 14520
     },
     {
       "run_date": "2026-06-29",
@@ -2125,8 +2125,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014436",
       "_json_file": "260722_1014436.json",
-      "_json_mtime_ns": 1784791905746427700,
-      "_json_size": 14308
+      "_json_mtime_ns": 1784734808030524800,
+      "_json_size": 14230
     },
     {
       "run_date": "2026-06-29",
@@ -2153,8 +2153,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014437",
       "_json_file": "260722_1014437.json",
-      "_json_mtime_ns": 1784791905746427700,
-      "_json_size": 12190
+      "_json_mtime_ns": 1784734808002110000,
+      "_json_size": 12112
     },
     {
       "run_date": "2026-06-29",
@@ -2181,8 +2181,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014439",
       "_json_file": "260722_1014439.json",
-      "_json_mtime_ns": 1784791905747427600,
-      "_json_size": 15623
+      "_json_mtime_ns": 1784734807970546200,
+      "_json_size": 15545
     },
     {
       "run_date": "2026-06-29",
@@ -2209,8 +2209,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014440",
       "_json_file": "260722_1014440.json",
-      "_json_mtime_ns": 1784791905748427200,
-      "_json_size": 13354
+      "_json_mtime_ns": 1784734807951480300,
+      "_json_size": 13276
     },
     {
       "run_date": "2026-06-29",
@@ -2236,8 +2236,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014442",
       "_json_file": "260722_1014442.json",
-      "_json_mtime_ns": 1784791905748427200,
-      "_json_size": 11592
+      "_json_mtime_ns": 1784734807936104000,
+      "_json_size": 11514
     },
     {
       "run_date": "2026-06-29",
@@ -2266,8 +2266,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014448",
       "_json_file": "260722_1014448.json",
-      "_json_mtime_ns": 1784791905749427600,
-      "_json_size": 14496
+      "_json_mtime_ns": 1784734807915903500,
+      "_json_size": 14417
     },
     {
       "run_date": "2026-06-29",
@@ -2296,8 +2296,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014451",
       "_json_file": "260722_1014451.json",
-      "_json_mtime_ns": 1784791905750427100,
-      "_json_size": 12807
+      "_json_mtime_ns": 1784734807888543800,
+      "_json_size": 12728
     },
     {
       "run_date": "2026-06-29",
@@ -2323,8 +2323,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014454",
       "_json_file": "260722_1014454.json",
-      "_json_mtime_ns": 1784791905750427100,
-      "_json_size": 12432
+      "_json_mtime_ns": 1784734807868080900,
+      "_json_size": 12354
     },
     {
       "run_date": "2026-06-29",
@@ -2353,8 +2353,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014455",
       "_json_file": "260722_1014455.json",
-      "_json_mtime_ns": 1784791905751428400,
-      "_json_size": 12441
+      "_json_mtime_ns": 1784734807846783800,
+      "_json_size": 12362
     },
     {
       "run_date": "2026-06-29",
@@ -2382,8 +2382,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014456",
       "_json_file": "260722_1014456.json",
-      "_json_mtime_ns": 1784791905751428400,
-      "_json_size": 11922
+      "_json_mtime_ns": 1784734807827078300,
+      "_json_size": 11843
     },
     {
       "run_date": "2026-06-29",
@@ -2410,8 +2410,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014457",
       "_json_file": "260722_1014457.json",
-      "_json_mtime_ns": 1784791905752427400,
-      "_json_size": 12480
+      "_json_mtime_ns": 1784734807806012700,
+      "_json_size": 12402
     },
     {
       "run_date": "2026-06-29",
@@ -2438,8 +2438,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014459",
       "_json_file": "260722_1014459.json",
-      "_json_mtime_ns": 1784791905753427500,
-      "_json_size": 13189
+      "_json_mtime_ns": 1784734807791177800,
+      "_json_size": 13111
     },
     {
       "run_date": "2026-06-29",
@@ -2466,8 +2466,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014462",
       "_json_file": "260722_1014462.json",
-      "_json_mtime_ns": 1784791905753427500,
-      "_json_size": 11219
+      "_json_mtime_ns": 1784734807771797700,
+      "_json_size": 11141
     },
     {
       "run_date": "2026-06-29",
@@ -2494,8 +2494,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014463",
       "_json_file": "260722_1014463.json",
-      "_json_mtime_ns": 1784791905754427600,
-      "_json_size": 15210
+      "_json_mtime_ns": 1784734807756164700,
+      "_json_size": 15132
     },
     {
       "run_date": "2026-06-29",
@@ -2522,8 +2522,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014467",
       "_json_file": "260722_1014467.json",
-      "_json_mtime_ns": 1784791905754427600,
-      "_json_size": 12289
+      "_json_mtime_ns": 1784734807736755400,
+      "_json_size": 12211
     },
     {
       "run_date": "2026-06-29",
@@ -2550,8 +2550,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014468",
       "_json_file": "260722_1014468.json",
-      "_json_mtime_ns": 1784791905755427200,
-      "_json_size": 11339
+      "_json_mtime_ns": 1784734807711741600,
+      "_json_size": 11261
     },
     {
       "run_date": "2026-06-29",
@@ -2578,8 +2578,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014470",
       "_json_file": "260722_1014470.json",
-      "_json_mtime_ns": 1784791905756427400,
-      "_json_size": 11063
+      "_json_mtime_ns": 1784734807688168500,
+      "_json_size": 10985
     },
     {
       "run_date": "2026-06-29",
@@ -2606,8 +2606,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014471",
       "_json_file": "260722_1014471.json",
-      "_json_mtime_ns": 1784791905756427400,
-      "_json_size": 13905
+      "_json_mtime_ns": 1784734807668876500,
+      "_json_size": 13827
     },
     {
       "run_date": "2026-06-29",
@@ -2634,8 +2634,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014472",
       "_json_file": "260722_1014472.json",
-      "_json_mtime_ns": 1784791905757427700,
-      "_json_size": 14331
+      "_json_mtime_ns": 1784734807642652800,
+      "_json_size": 14253
     },
     {
       "run_date": "2026-06-29",
@@ -2662,8 +2662,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014473",
       "_json_file": "260722_1014473.json",
-      "_json_mtime_ns": 1784791905758428200,
-      "_json_size": 13555
+      "_json_mtime_ns": 1784734807611589700,
+      "_json_size": 13477
     },
     {
       "run_date": "2026-06-29",
@@ -2690,8 +2690,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014474",
       "_json_file": "260722_1014474.json",
-      "_json_mtime_ns": 1784791905758428200,
-      "_json_size": 16302
+      "_json_mtime_ns": 1784734807590604800,
+      "_json_size": 16224
     },
     {
       "run_date": "2026-06-29",
@@ -2718,8 +2718,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014480",
       "_json_file": "260722_1014480.json",
-      "_json_mtime_ns": 1784791905759427900,
-      "_json_size": 14392
+      "_json_mtime_ns": 1784734807571682100,
+      "_json_size": 14314
     },
     {
       "run_date": "2026-06-29",
@@ -2748,8 +2748,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014483",
       "_json_file": "260722_1014483.json",
-      "_json_mtime_ns": 1784791905759427900,
-      "_json_size": 11205
+      "_json_mtime_ns": 1784734807552923600,
+      "_json_size": 11125
     },
     {
       "run_date": "2026-06-29",
@@ -2775,8 +2775,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014484",
       "_json_file": "260722_1014484.json",
-      "_json_mtime_ns": 1784791905760427600,
-      "_json_size": 13346
+      "_json_mtime_ns": 1784734807534819100,
+      "_json_size": 13268
     },
     {
       "run_date": "2026-06-29",
@@ -2805,8 +2805,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014485",
       "_json_file": "260722_1014485.json",
-      "_json_mtime_ns": 1784791905761427400,
-      "_json_size": 12299
+      "_json_mtime_ns": 1784734807515814600,
+      "_json_size": 12220
     },
     {
       "run_date": "2026-06-29",
@@ -2832,8 +2832,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014488",
       "_json_file": "260722_1014488.json",
-      "_json_mtime_ns": 1784791905761427400,
-      "_json_size": 11604
+      "_json_mtime_ns": 1784734807497807300,
+      "_json_size": 11526
     },
     {
       "run_date": "2026-06-29",
@@ -2862,8 +2862,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014490",
       "_json_file": "260722_1014490.json",
-      "_json_mtime_ns": 1784791905762427500,
-      "_json_size": 10921
+      "_json_mtime_ns": 1784734807473842000,
+      "_json_size": 10842
     },
     {
       "run_date": "2026-06-29",
@@ -2890,8 +2890,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014502",
       "_json_file": "260722_1014502.json",
-      "_json_mtime_ns": 1784791905763427800,
-      "_json_size": 14020
+      "_json_mtime_ns": 1784734807450830100,
+      "_json_size": 13942
     },
     {
       "run_date": "2026-06-29",
@@ -2918,8 +2918,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014504",
       "_json_file": "260722_1014504.json",
-      "_json_mtime_ns": 1784791905763427800,
-      "_json_size": 15749
+      "_json_mtime_ns": 1784734807420752800,
+      "_json_size": 15671
     },
     {
       "run_date": "2026-06-29",
@@ -2946,8 +2946,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014505",
       "_json_file": "260722_1014505.json",
-      "_json_mtime_ns": 1784791905764428000,
-      "_json_size": 13195
+      "_json_mtime_ns": 1784734807390789000,
+      "_json_size": 13117
     },
     {
       "run_date": "2026-06-29",
@@ -2974,8 +2974,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014506",
       "_json_file": "260722_1014506.json",
-      "_json_mtime_ns": 1784791905765428200,
-      "_json_size": 14920
+      "_json_mtime_ns": 1784734807372256800,
+      "_json_size": 14842
     },
     {
       "run_date": "2026-06-29",
@@ -3002,8 +3002,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014510",
       "_json_file": "260722_1014510.json",
-      "_json_mtime_ns": 1784791905765428200,
-      "_json_size": 15822
+      "_json_mtime_ns": 1784734807354588600,
+      "_json_size": 15744
     },
     {
       "run_date": "2026-06-29",
@@ -3030,8 +3030,8 @@
       "_source_type": "ims_usa",
       "_record_id": "1014517",
       "_json_file": "260722_1014517.json",
-      "_json_mtime_ns": 1784791905766427900,
-      "_json_size": 14661
+      "_json_mtime_ns": 1784734807334226900,
+      "_json_size": 14583
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T10:03:50",
+  "generated_at": "2026-07-23T10:03:46",
   "folder": "Agent_2",
   "index_type": "daily_slim",
   "date_prefix": "260520",
@@ -28,8 +28,8 @@
       "_source_type": "new_competition",
       "_record_id": "343200-2026",
       "_json_file": "260722_343200-2026.json",
-      "_json_mtime_ns": 1784791898497204400,
-      "_json_size": 14644
+      "_json_mtime_ns": 1784734676549529000,
+      "_json_size": 14596
     },
     {
       "Date": "2026-05-20",
@@ -54,8 +54,8 @@
       "_source_type": "new_competition",
       "_record_id": "343246-2026",
       "_json_file": "260722_343246-2026.json",
-      "_json_mtime_ns": 1784791898497739500,
-      "_json_size": 10173
+      "_json_mtime_ns": 1784734676573237900,
+      "_json_size": 10125
     },
     {
       "Date": "2026-05-20",
@@ -80,8 +80,8 @@
       "_source_type": "new_competition",
       "_record_id": "343308-2026",
       "_json_file": "260722_343308-2026.json",
-      "_json_mtime_ns": 1784791898498294300,
-      "_json_size": 16897
+      "_json_mtime_ns": 1784734676591054300,
+      "_json_size": 16849
     },
     {
       "Date": "2026-05-20",
@@ -107,8 +107,8 @@
       "_source_type": "new_competition",
       "_record_id": "343319-2026",
       "_json_file": "260722_343319-2026.json",
-      "_json_mtime_ns": 1784791898498857800,
-      "_json_size": 11228
+      "_json_mtime_ns": 1784734676611955200,
+      "_json_size": 11180
     },
     {
       "Date": "2026-05-20",
@@ -135,8 +135,8 @@
       "_source_type": "new_competition",
       "_record_id": "343431-2026",
       "_json_file": "260722_343431-2026.json",
-      "_json_mtime_ns": 1784791898500641400,
-      "_json_size": 14328
+      "_json_mtime_ns": 1784734676631542400,
+      "_json_size": 14280
     },
     {
       "Date": "2026-05-20",
@@ -162,8 +162,8 @@
       "_source_type": "new_competition",
       "_record_id": "343582-2026",
       "_json_file": "260722_343582-2026.json",
-      "_json_mtime_ns": 1784791898501789100,
-      "_json_size": 9665
+      "_json_mtime_ns": 1784734676653509000,
+      "_json_size": 9617
     },
     {
       "Date": "2026-05-20",
@@ -188,8 +188,8 @@
       "_source_type": "new_competition",
       "_record_id": "343584-2026",
       "_json_file": "260722_343584-2026.json",
-      "_json_mtime_ns": 1784791898502332000,
-      "_json_size": 12404
+      "_json_mtime_ns": 1784734676678994400,
+      "_json_size": 12356
     },
     {
       "Date": "2026-05-20",
@@ -215,8 +215,8 @@
       "_source_type": "new_competition",
       "_record_id": "343605-2026",
       "_json_file": "260722_343605-2026.json",
-      "_json_mtime_ns": 1784791898503428000,
-      "_json_size": 12135
+      "_json_mtime_ns": 1784734676699918400,
+      "_json_size": 12087
     },
     {
       "Date": "2026-05-20",
@@ -241,8 +241,8 @@
       "_source_type": "new_competition",
       "_record_id": "343723-2026",
       "_json_file": "260722_343723-2026.json",
-      "_json_mtime_ns": 1784791898503969100,
-      "_json_size": 12685
+      "_json_mtime_ns": 1784734676720861400,
+      "_json_size": 12637
     },
     {
       "Date": "2026-05-20",
@@ -268,8 +268,8 @@
       "_source_type": "new_competition",
       "_record_id": "343725-2026",
       "_json_file": "260722_343725-2026.json",
-      "_json_mtime_ns": 1784791898505071100,
-      "_json_size": 12919
+      "_json_mtime_ns": 1784734676738091400,
+      "_json_size": 12871
     },
     {
       "Date": "2026-05-20",
@@ -295,8 +295,8 @@
       "_source_type": "new_competition",
       "_record_id": "343800-2026",
       "_json_file": "260722_343800-2026.json",
-      "_json_mtime_ns": 1784791898506161100,
-      "_json_size": 12773
+      "_json_mtime_ns": 1784734676757401900,
+      "_json_size": 12725
     },
     {
       "Date": "2026-05-20",
@@ -322,8 +322,8 @@
       "_source_type": "new_competition",
       "_record_id": "343941-2026",
       "_json_file": "260722_343941-2026.json",
-      "_json_mtime_ns": 1784791898506704700,
-      "_json_size": 8824
+      "_json_mtime_ns": 1784734676774760000,
+      "_json_size": 8776
     },
     {
       "Date": "2026-05-20",
@@ -349,8 +349,8 @@
       "_source_type": "new_competition",
       "_record_id": "343953-2026",
       "_json_file": "260722_343953-2026.json",
-      "_json_mtime_ns": 1784791898507249700,
-      "_json_size": 12288
+      "_json_mtime_ns": 1784734676789734600,
+      "_json_size": 12240
     },
     {
       "Date": "2026-05-20",
@@ -375,8 +375,8 @@
       "_source_type": "new_competition",
       "_record_id": "343990-2026",
       "_json_file": "260722_343990-2026.json",
-      "_json_mtime_ns": 1784791898508337100,
-      "_json_size": 14253
+      "_json_mtime_ns": 1784734676805525200,
+      "_json_size": 14205
     },
     {
       "Date": "2026-05-20",
@@ -401,8 +401,8 @@
       "_source_type": "new_competition",
       "_record_id": "344038-2026",
       "_json_file": "260722_344038-2026.json",
-      "_json_mtime_ns": 1784791898508876700,
-      "_json_size": 12956
+      "_json_mtime_ns": 1784734676821082700,
+      "_json_size": 12908
     },
     {
       "Date": "2026-05-20",
@@ -427,8 +427,8 @@
       "_source_type": "new_competition",
       "_record_id": "344118-2026",
       "_json_file": "260722_344118-2026.json",
-      "_json_mtime_ns": 1784791898509970800,
-      "_json_size": 14461
+      "_json_mtime_ns": 1784734676835952700,
+      "_json_size": 14413
     },
     {
       "Date": "2026-05-20",
@@ -453,8 +453,8 @@
       "_source_type": "new_competition",
       "_record_id": "344348-2026",
       "_json_file": "260722_344348-2026.json",
-      "_json_mtime_ns": 1784791898510513600,
-      "_json_size": 13289
+      "_json_mtime_ns": 1784734676849860400,
+      "_json_size": 13241
     },
     {
       "Date": "2026-05-20",
@@ -480,8 +480,8 @@
       "_source_type": "new_competition",
       "_record_id": "344406-2026",
       "_json_file": "260722_344406-2026.json",
-      "_json_mtime_ns": 1784791898511685800,
-      "_json_size": 14838
+      "_json_mtime_ns": 1784734676863383400,
+      "_json_size": 14790
     },
     {
       "Date": "2026-05-20",
@@ -506,8 +506,8 @@
       "_source_type": "new_competition",
       "_record_id": "344418-2026",
       "_json_file": "260722_344418-2026.json",
-      "_json_mtime_ns": 1784791898512278200,
-      "_json_size": 12016
+      "_json_mtime_ns": 1784734676876185000,
+      "_json_size": 11968
     },
     {
       "Date": "2026-05-20",
@@ -532,8 +532,8 @@
       "_source_type": "new_competition",
       "_record_id": "344510-2026",
       "_json_file": "260722_344510-2026.json",
-      "_json_mtime_ns": 1784791898512821700,
-      "_json_size": 11066
+      "_json_mtime_ns": 1784734676890081500,
+      "_json_size": 11018
     },
     {
       "Date": "2026-05-20",
@@ -558,8 +558,8 @@
       "_source_type": "new_competition",
       "_record_id": "344556-2026",
       "_json_file": "260722_344556-2026.json",
-      "_json_mtime_ns": 1784791898513951700,
-      "_json_size": 10431
+      "_json_mtime_ns": 1784734676904378500,
+      "_json_size": 10383
     },
     {
       "Date": "2026-05-20",
@@ -585,8 +585,8 @@
       "_source_type": "new_competition",
       "_record_id": "344587-2026",
       "_json_file": "260722_344587-2026.json",
-      "_json_mtime_ns": 1784791898515037000,
-      "_json_size": 10712
+      "_json_mtime_ns": 1784734676916919200,
+      "_json_size": 10664
     },
     {
       "Date": "2026-05-20",
@@ -612,8 +612,8 @@
       "_source_type": "new_competition",
       "_record_id": "344673-2026",
       "_json_file": "260722_344673-2026.json",
-      "_json_mtime_ns": 1784791898515581700,
-      "_json_size": 11201
+      "_json_mtime_ns": 1784734676933414500,
+      "_json_size": 11153
     },
     {
       "Date": "2026-05-20",
@@ -639,8 +639,8 @@
       "_source_type": "new_competition",
       "_record_id": "344711-2026",
       "_json_file": "260722_344711-2026.json",
-      "_json_mtime_ns": 1784791898516131000,
-      "_json_size": 13943
+      "_json_mtime_ns": 1784734676951716200,
+      "_json_size": 13895
     },
     {
       "Date": "2026-05-20",
@@ -666,8 +666,8 @@
       "_source_type": "new_competition",
       "_record_id": "344761-2026",
       "_json_file": "260722_344761-2026.json",
-      "_json_mtime_ns": 1784791898517227700,
-      "_json_size": 8707
+      "_json_mtime_ns": 1784734676979756200,
+      "_json_size": 8659
     },
     {
       "Date": "2026-05-20",
@@ -692,8 +692,8 @@
       "_source_type": "new_competition",
       "_record_id": "344773-2026",
       "_json_file": "260722_344773-2026.json",
-      "_json_mtime_ns": 1784791898517773300,
-      "_json_size": 10827
+      "_json_mtime_ns": 1784734677021867900,
+      "_json_size": 10779
     },
     {
       "Date": "2026-05-20",
@@ -718,8 +718,8 @@
       "_source_type": "new_competition",
       "_record_id": "344801-2026",
       "_json_file": "260722_344801-2026.json",
-      "_json_mtime_ns": 1784791898518859000,
-      "_json_size": 13886
+      "_json_mtime_ns": 1784734677050505700,
+      "_json_size": 13838
     },
     {
       "Date": "2026-05-20",
@@ -744,8 +744,8 @@
       "_source_type": "new_competition",
       "_record_id": "344988-2026",
       "_json_file": "260722_344988-2026.json",
-      "_json_mtime_ns": 1784791898519405200,
-      "_json_size": 14220
+      "_json_mtime_ns": 1784734677072169500,
+      "_json_size": 14172
     },
     {
       "Date": "2026-05-20",
@@ -771,8 +771,8 @@
       "_source_type": "new_competition",
       "_record_id": "345147-2026",
       "_json_file": "260722_345147-2026.json",
-      "_json_mtime_ns": 1784791898520490200,
-      "_json_size": 13285
+      "_json_mtime_ns": 1784734677093597300,
+      "_json_size": 13237
     },
     {
       "Date": "2026-05-20",
@@ -797,8 +797,8 @@
       "_source_type": "new_competition",
       "_record_id": "345171-2026",
       "_json_file": "260722_345171-2026.json",
-      "_json_mtime_ns": 1784791898521540800,
-      "_json_size": 12877
+      "_json_mtime_ns": 1784734677113064100,
+      "_json_size": 12829
     },
     {
       "Date": "2026-05-20",
@@ -823,8 +823,8 @@
       "_source_type": "new_competition",
       "_record_id": "345483-2026",
       "_json_file": "260722_345483-2026.json",
-      "_json_mtime_ns": 1784791898522081000,
-      "_json_size": 11939
+      "_json_mtime_ns": 1784734677128021400,
+      "_json_size": 11891
     },
     {
       "Date": "2026-05-20",
@@ -849,8 +849,8 @@
       "_source_type": "new_competition",
       "_record_id": "345595-2026",
       "_json_file": "260722_345595-2026.json",
-      "_json_mtime_ns": 1784791898523165900,
-      "_json_size": 15456
+      "_json_mtime_ns": 1784734677140242500,
+      "_json_size": 15408
     },
     {
       "Date": "2026-05-20",
@@ -875,8 +875,8 @@
       "_source_type": "new_competition",
       "_record_id": "345632-2026",
       "_json_file": "260722_345632-2026.json",
-      "_json_mtime_ns": 1784791898523713800,
-      "_json_size": 11495
+      "_json_mtime_ns": 1784734677149733000,
+      "_json_size": 11447
     },
     {
       "Date": "2026-05-20",
@@ -901,8 +901,8 @@
       "_source_type": "new_competition",
       "_record_id": "345646-2026",
       "_json_file": "260722_345646-2026.json",
-      "_json_mtime_ns": 1784791898524257900,
-      "_json_size": 15642
+      "_json_mtime_ns": 1784734677172757600,
+      "_json_size": 15594
     },
     {
       "Date": "2026-05-20",
@@ -927,8 +927,8 @@
       "_source_type": "new_competition",
       "_record_id": "345658-2026",
       "_json_file": "260722_345658-2026.json",
-      "_json_mtime_ns": 1784791898525394300,
-      "_json_size": 12803
+      "_json_mtime_ns": 1784734677195904500,
+      "_json_size": 12755
     },
     {
       "Date": "2026-05-20",
@@ -954,8 +954,8 @@
       "_source_type": "new_competition",
       "_record_id": "345702-2026",
       "_json_file": "260722_345702-2026.json",
-      "_json_mtime_ns": 1784791898525944400,
-      "_json_size": 11366
+      "_json_mtime_ns": 1784734677220313300,
+      "_json_size": 11318
     },
     {
       "Date": "2026-05-20",
@@ -981,8 +981,8 @@
       "_source_type": "new_competition",
       "_record_id": "345811-2026",
       "_json_file": "260722_345811-2026.json",
-      "_json_mtime_ns": 1784791898526482600,
-      "_json_size": 14418
+      "_json_mtime_ns": 1784734677243033800,
+      "_json_size": 14370
     },
     {
       "Date": "2026-05-20",
@@ -1007,8 +1007,8 @@
       "_source_type": "new_competition",
       "_record_id": "345954-2026",
       "_json_file": "260722_345954-2026.json",
-      "_json_mtime_ns": 1784791898527565700,
-      "_json_size": 10651
+      "_json_mtime_ns": 1784734677265850900,
+      "_json_size": 10603
     },
     {
       "Date": "2026-05-20",
@@ -1034,8 +1034,8 @@
       "_source_type": "new_competition",
       "_record_id": "345994-2026",
       "_json_file": "260722_345994-2026.json",
-      "_json_mtime_ns": 1784791898528157700,
-      "_json_size": 9248
+      "_json_mtime_ns": 1784734677287824100,
+      "_json_size": 9200
     },
     {
       "Date": "2026-05-20",
@@ -1060,8 +1060,8 @@
       "_source_type": "new_competition",
       "_record_id": "345996-2026",
       "_json_file": "260722_345996-2026.json",
-      "_json_mtime_ns": 1784791898529285800,
-      "_json_size": 12150
+      "_json_mtime_ns": 1784734677310871600,
+      "_json_size": 12102
     },
     {
       "Date": "2026-05-20",
@@ -1086,8 +1086,8 @@
       "_source_type": "new_competition",
       "_record_id": "346023-2026",
       "_json_file": "260722_346023-2026.json",
-      "_json_mtime_ns": 1784791898529836600,
-      "_json_size": 9593
+      "_json_mtime_ns": 1784734677330936800,
+      "_json_size": 9545
     },
     {
       "Date": "2026-05-20",
@@ -1113,8 +1113,8 @@
       "_source_type": "new_competition",
       "_record_id": "346036-2026",
       "_json_file": "260722_346036-2026.json",
-      "_json_mtime_ns": 1784791898530962700,
-      "_json_size": 10549
+      "_json_mtime_ns": 1784734677350635100,
+      "_json_size": 10501
     },
     {
       "Date": "2026-05-20",
@@ -1140,8 +1140,8 @@
       "_source_type": "new_competition",
       "_record_id": "346083-2026",
       "_json_file": "260722_346083-2026.json",
-      "_json_mtime_ns": 1784791898531558500,
-      "_json_size": 18173
+      "_json_mtime_ns": 1784734677364948500,
+      "_json_size": 18125
     },
     {
       "Date": "2026-05-20",
@@ -1166,8 +1166,8 @@
       "_source_type": "new_competition",
       "_record_id": "346126-2026",
       "_json_file": "260722_346126-2026.json",
-      "_json_mtime_ns": 1784791898532667600,
-      "_json_size": 12932
+      "_json_mtime_ns": 1784734677376594200,
+      "_json_size": 12884
     },
     {
       "Date": "2026-05-20",
@@ -1192,8 +1192,8 @@
       "_source_type": "new_competition",
       "_record_id": "346134-2026",
       "_json_file": "260722_346134-2026.json",
-      "_json_mtime_ns": 1784791898533755700,
-      "_json_size": 19104
+      "_json_mtime_ns": 1784734677393155300,
+      "_json_size": 19056
     },
     {
       "Date": "2026-05-20",
@@ -1218,8 +1218,8 @@
       "_source_type": "new_competition",
       "_record_id": "346160-2026",
       "_json_file": "260722_346160-2026.json",
-      "_json_mtime_ns": 1784791898534301300,
-      "_json_size": 12154
+      "_json_mtime_ns": 1784734677406098100,
+      "_json_size": 12106
     },
     {
       "Date": "2026-05-20",
@@ -1244,8 +1244,8 @@
       "_source_type": "new_competition",
       "_record_id": "346479-2026",
       "_json_file": "260722_346479-2026.json",
-      "_json_mtime_ns": 1784791898534845500,
-      "_json_size": 17226
+      "_json_mtime_ns": 1784734677427348700,
+      "_json_size": 17178
     },
     {
       "Date": "2026-05-20",
@@ -1270,8 +1270,8 @@
       "_source_type": "new_competition",
       "_record_id": "346492-2026",
       "_json_file": "260722_346492-2026.json",
-      "_json_mtime_ns": 1784791898535397100,
-      "_json_size": 13100
+      "_json_mtime_ns": 1784734677448307000,
+      "_json_size": 13052
     },
     {
       "Date": "2026-05-20",
@@ -1296,8 +1296,8 @@
       "_source_type": "new_competition",
       "_record_id": "346655-2026",
       "_json_file": "260722_346655-2026.json",
-      "_json_mtime_ns": 1784791898536498600,
-      "_json_size": 12587
+      "_json_mtime_ns": 1784734677479603600,
+      "_json_size": 12539
     }
   ]
 }

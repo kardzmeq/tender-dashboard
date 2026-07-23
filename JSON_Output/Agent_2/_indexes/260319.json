@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-23T10:03:50",
+  "generated_at": "2026-07-23T10:03:46",
   "folder": "Agent_2",
   "index_type": "daily_slim",
   "date_prefix": "260319",
@@ -30,8 +30,8 @@
       "_source_type": "new_competition",
       "_record_id": "189085-2026",
       "_json_file": "260722_189085-2026.json",
-      "_json_mtime_ns": 1784791896331756900,
-      "_json_size": 18649
+      "_json_mtime_ns": 1784734643512197400,
+      "_json_size": 18601
     }
   ]
 }
