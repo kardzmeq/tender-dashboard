@@ -1,8 +1,27 @@
-const DATA_URL = "./data/ted_results.xlsx";
-const USA_DATA_URL = "./data/tender_results_usa.xlsx";
-const NEW_SHEET = "Agent_2";
-const RESULTS_SHEET = "Agent_2_Results";
-const USA_SHEET = "IMS_USA";
+const MANIFEST_URL = "./JSON_Output/_manifest.json";
+const DATA_SOURCES = [
+  {
+    key: "agent2",
+    folder: "Agent_2",
+    sourceType: "new_competition",
+    market: "ted",
+    fallbackUrl: "./JSON_Output/Agent_2/_index.json",
+  },
+  {
+    key: "results",
+    folder: "Agent_2_Results",
+    sourceType: "results",
+    market: "ted",
+    fallbackUrl: "./JSON_Output/Agent_2_Results/_index.json",
+  },
+  {
+    key: "ims_usa",
+    folder: "IMS_USA",
+    sourceType: "new_competition",
+    market: "usa",
+    fallbackUrl: "./JSON_Output/IMS_USA/_index.json",
+  },
+];
 const LOCATION_FILTERS = [
   ["Berlin", "berlin"],
   ["Stuttgart", "stuttgart"],
@@ -83,6 +102,13 @@ const state = {
     fieldEditsByKey: new Map(),
     loadRequestId: 0,
   },
+  data: {
+    manifest: null,
+    rowsByCacheKey: new Map(),
+    loadedShardKeys: new Set(),
+    fallbackLoaded: false,
+    hasBoundUi: false,
+  },
   ui: {
     authCollapsed: false,
     hasAutoCollapsedAuth: false,
@@ -129,6 +155,11 @@ function esc(v) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function selectorEscape(value) {
+  if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(String(value));
+  return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function setActionMessage(text, isError = false, timeoutMs = 8000) {
@@ -219,32 +250,166 @@ function buildTenderKey(row, sourceType, index, market = "ted") {
   return fallback ? `fallback:${fallback}` : `fallback:${sourceType}-${index}`;
 }
 
-function parseSheetRows(workbook, sheetName, sourceType, market = "ted") {
-  if (!workbook.SheetNames.includes(sheetName)) return [];
-  const ws = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-  if (!rows.length) return [];
-
-  const headers = rows[0].map((h) => normalize(h).toLowerCase());
+function parseJsonIndexRows(indexPayload, sourceType, market = "ted") {
+  const records = Array.isArray(indexPayload)
+    ? indexPayload
+    : (Array.isArray(indexPayload && indexPayload.records) ? indexPayload.records : []);
   const out = [];
-  for (let i = 1; i < rows.length; i += 1) {
-    const vals = rows[i] || [];
+  records.forEach((record, index) => {
+    if (!record || typeof record !== "object") return;
     const row = {};
-    let hasAny = false;
-    headers.forEach((h, idx) => {
-      if (!h) return;
-      const val = vals[idx];
-      if (normalize(val)) hasAny = true;
-      row[h] = val;
+    Object.entries(record).forEach(([key, value]) => {
+      const normalizedKey = normalize(key).toLowerCase();
+      if (normalizedKey && normalizedKey !== "agent_1" && !normalizedKey.startsWith("agent_1_")) {
+        row[normalizedKey] = value;
+      }
     });
-    if (!hasAny) continue;
     row._source_type = sourceType;
     row._market = market;
-    row._tenderKey = buildTenderKey(row, sourceType, i, market);
-    row._key = `${row._tenderKey}::${i}`;
+    row._tenderKey = buildTenderKey(row, sourceType, index, market);
+    row._cacheKey = `${market}:${sourceType}:${normalize(row._json_file) || `${row._tenderKey}:${index}`}`;
+    row._key = row._cacheKey;
     out.push(row);
-  }
+  });
   return out;
+}
+
+async function fetchJsonIndex(url, warnings, options = {}) {
+  const { allowMissing = false } = options;
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) {
+    if (allowMissing && response.status === 404) return { records: [] };
+    warnings.push(`JSON index could not be loaded (${url}, HTTP ${response.status}).`);
+    return { records: [] };
+  }
+  return response.json();
+}
+
+function dailyIndexUrl(source, datePrefix) {
+  return `./JSON_Output/${source.folder}/_indexes/${datePrefix}.json`;
+}
+
+function manifestEntryFor(source, datePrefix) {
+  const folders = state.data.manifest && state.data.manifest.folders;
+  const folderEntries = folders && folders[source.folder];
+  return folderEntries && folderEntries[datePrefix] ? folderEntries[datePrefix] : null;
+}
+
+function setLoadWarnings(warnings) {
+  const warningsEl = document.getElementById("loadWarnings");
+  if (!warningsEl) return;
+  warningsEl.innerHTML = (warnings || []).map((w) => `<div>${esc(w)}</div>`).join("");
+}
+
+function setLoadStatus(text) {
+  const status = document.getElementById("loadStatus");
+  if (status) status.textContent = text;
+}
+
+async function loadManifest(warnings) {
+  try {
+    const response = await fetch(MANIFEST_URL, { cache: "no-cache" });
+    if (!response.ok) {
+      warnings.push(`Daily manifest not available (${MANIFEST_URL}, HTTP ${response.status}). Falling back to folder indexes.`);
+      return null;
+    }
+    const manifest = await response.json();
+    state.data.manifest = manifest && typeof manifest === "object" ? manifest : null;
+    return state.data.manifest;
+  } catch (err) {
+    warnings.push(`Daily manifest could not be loaded: ${err.message || err}. Falling back to folder indexes.`);
+    state.data.manifest = null;
+    return null;
+  }
+}
+
+function mergeRows(rows) {
+  const newTenderKeys = [];
+  rows.forEach((row) => {
+    enrichRow(row);
+    const existed = state.data.rowsByCacheKey.has(row._cacheKey);
+    state.data.rowsByCacheKey.set(row._cacheKey, row);
+    if (!existed) newTenderKeys.push(row._tenderKey);
+  });
+  state.rows = [...state.data.rowsByCacheKey.values()];
+  return newTenderKeys;
+}
+
+async function loadFallbackIndexes(warnings) {
+  if (state.data.fallbackLoaded) return [];
+  setLoadStatus("Loading fallback JSON indexes...");
+
+  const payloads = await Promise.all(
+    DATA_SOURCES.map((source) => fetchJsonIndex(source.fallbackUrl, warnings).then((payload) => ({ source, payload })))
+  );
+
+  const rows = [];
+  payloads.forEach(({ source, payload }) => {
+    rows.push(...parseJsonIndexRows(payload, source.sourceType, source.market));
+  });
+  state.data.fallbackLoaded = true;
+  return mergeRows(rows);
+}
+
+async function ensureRowsForCurrentDateRange(options = {}) {
+  const { warnings = [], refresh = true, loadRemote = true } = options;
+  const prefixes = datePrefixesForRange(state.filters.startDate, state.filters.endDate);
+
+  if (!state.data.manifest && !state.data.fallbackLoaded) {
+    await loadManifest(warnings);
+  }
+
+  if (!state.data.manifest) {
+    const newTenderKeys = await loadFallbackIndexes(warnings);
+    addDynamicFilterButtons();
+    if (loadRemote && newTenderKeys.length && state.auth.user) {
+      await loadRemoteDataForTenderKeys(newTenderKeys, { replaceAll: false, refresh: false });
+    }
+    if (refresh) refreshUI();
+    setLoadWarnings(warnings);
+    setLoadStatus(`JSON loaded: ${state.rows.length} fallback rows from TED new competitions, TED results, and IMS USA.`);
+    return newTenderKeys;
+  }
+
+  const shardRequests = [];
+  DATA_SOURCES.forEach((source) => {
+    prefixes.forEach((prefix) => {
+      const shardKey = `${source.key}:${prefix}`;
+      if (state.data.loadedShardKeys.has(shardKey)) return;
+      const manifestEntry = manifestEntryFor(source, prefix);
+      if (!manifestEntry || Number(manifestEntry.count || 0) <= 0) {
+        state.data.loadedShardKeys.add(shardKey);
+        return;
+      }
+      state.data.loadedShardKeys.add(shardKey);
+      shardRequests.push(
+        fetchJsonIndex(dailyIndexUrl(source, prefix), warnings, { allowMissing: true })
+          .then((payload) => ({ source, payload }))
+      );
+    });
+  });
+
+  if (shardRequests.length) {
+    setLoadStatus(`Loading ${shardRequests.length} daily JSON indexes...`);
+  }
+
+  const loaded = await Promise.all(shardRequests);
+  const rows = [];
+  loaded.forEach(({ source, payload }) => {
+    rows.push(...parseJsonIndexRows(payload, source.sourceType, source.market));
+  });
+
+  const newTenderKeys = mergeRows(rows);
+  addDynamicFilterButtons();
+  if (loadRemote && newTenderKeys.length && state.auth.user) {
+    await loadRemoteDataForTenderKeys(newTenderKeys, { replaceAll: false, refresh: false });
+  }
+  if (refresh) refreshUI();
+
+  const loadedShardCount = state.data.loadedShardKeys.size;
+  setLoadWarnings(warnings);
+  setLoadStatus(`JSON loaded: ${state.rows.length} rows from ${loadedShardCount} daily source indexes.`);
+  return newTenderKeys;
 }
 
 function parseRelevanzScore(value) {
@@ -288,6 +453,79 @@ function formatDateInput(dateObj) {
   const m = String(dateObj.getMonth() + 1).padStart(2, "0");
   const d = String(dateObj.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function datePrefixFromDate(dateObj) {
+  const yy = String(dateObj.getFullYear()).slice(-2);
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${yy}${m}${d}`;
+}
+
+function parseDateInputValue(value) {
+  const raw = normalize(value);
+  if (!raw) return null;
+  const parsed = new Date(`${raw}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function datePrefixesForRange(startRaw, endRaw) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let startDate = parseDateInputValue(startRaw) || today;
+  let endDate = parseDateInputValue(endRaw) || startDate;
+  if (startDate > endDate) {
+    const tmp = startDate;
+    startDate = endDate;
+    endDate = tmp;
+  }
+
+  const prefixes = [];
+  const cursor = new Date(startDate);
+  cursor.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  while (cursor <= end) {
+    prefixes.push(datePrefixFromDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return prefixes;
+}
+
+function dateInputFromPrefix(prefix) {
+  const raw = normalize(prefix);
+  if (!/^[0-9]{6}$/.test(raw)) return "";
+  return `20${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4, 6)}`;
+}
+
+function manifestHasAnyRowsForPrefix(prefix) {
+  return DATA_SOURCES.some((source) => {
+    const entry = manifestEntryFor(source, prefix);
+    return entry && Number(entry.count || 0) > 0;
+  });
+}
+
+function applyLatestAvailableDateIfTodayIsEmpty() {
+  if (!state.data.manifest || !Array.isArray(state.data.manifest.dates)) return;
+  const todayPrefix = datePrefixesForRange(state.filters.startDate, state.filters.endDate)[0];
+  if (todayPrefix && manifestHasAnyRowsForPrefix(todayPrefix)) return;
+
+  const availableDates = state.data.manifest.dates
+    .filter((prefix) => /^[0-9]{6}$/.test(prefix) && manifestHasAnyRowsForPrefix(prefix))
+    .sort();
+  const latestPrefix = availableDates[availableDates.length - 1];
+  const latestDate = dateInputFromPrefix(latestPrefix);
+  if (!latestDate) return;
+
+  const startEl = document.getElementById("startDate");
+  const endEl = document.getElementById("endDate");
+  if (startEl) startEl.value = latestDate;
+  if (endEl) endEl.value = latestDate;
+  state.filters.startDate = latestDate;
+  state.filters.endDate = latestDate;
+  clearDateRangeQuickSelection();
 }
 
 function formatDateTime(value) {
@@ -378,7 +616,9 @@ function buildGoogleMapsLink(location) {
 }
 
 function normalizeSourceType(value) {
-  return normalize(value).toLowerCase() === "results" ? "results" : "new_competition";
+  const source = normalize(value).toLowerCase();
+  if (source === "results") return "results";
+  return "new_competition";
 }
 
 function sourceLabel(sourceType) {
@@ -443,7 +683,7 @@ function fieldDate(row) {
 }
 
 function fieldSummary(row) {
-  return pickField(row, ["kurzbeschreibung", "short_description", "project_scope"]);
+  return pickField(row, ["kurzbeschreibung", "short_description", "project_scope", "beschreibung"]);
 }
 
 function fieldScope(row) {
@@ -1180,6 +1420,7 @@ function applyEffectiveScores() {
 function addDynamicFilterButtons() {
   const locationWrap = document.getElementById("locationFilters");
   LOCATION_FILTERS.forEach(([label, value]) => {
+    if (locationWrap.querySelector(`.filter-btn[data-filter-group="location"][data-value="${selectorEscape(value)}"]`)) return;
     locationWrap.insertAdjacentHTML(
       "beforeend",
       `<button class="filter-btn" data-filter-group="location" data-value="${esc(value)}">${esc(label)}</button>`
@@ -1189,19 +1430,23 @@ function addDynamicFilterButtons() {
   const categories = [...new Set(state.rows.map((r) => normalize(canonicalCategoryLabel(r.category))).filter(Boolean))].sort();
   const categoryWrap = document.getElementById("categoryFilters");
   categories.forEach((cat) => {
+    const value = cat.toLowerCase();
+    if (categoryWrap.querySelector(`.filter-btn[data-filter-group="category"][data-value="${selectorEscape(value)}"]`)) return;
     categoryWrap.insertAdjacentHTML(
       "beforeend",
-      `<button class="filter-btn" data-filter-group="category" data-value="${esc(cat.toLowerCase())}">${esc(cat)}</button>`
+      `<button class="filter-btn" data-filter-group="category" data-value="${esc(value)}">${esc(cat)}</button>`
     );
   });
 
   const scoreWrap = document.getElementById("scoreFilters");
   for (let i = 1; i <= 10; i += 1) {
+    if (scoreWrap.querySelector(`.filter-btn[data-filter-group="score"][data-value="${i}"]`)) continue;
     scoreWrap.insertAdjacentHTML(
       "beforeend",
       `<button class="filter-btn" data-filter-group="score" data-value="${i}">${i}</button>`
     );
   }
+  bindFilterButtons();
 }
 
 function dateWithinRange(rowDate, startDateRaw, endDateRaw) {
@@ -1779,6 +2024,47 @@ function activateSearchPresetFilter(value) {
   updateSearchPresetButtons();
 }
 
+function handleFilterButtonClick(btn) {
+  const group = btn.getAttribute("data-filter-group");
+  const value = btn.getAttribute("data-value") || "all";
+  if (!group) return;
+
+  if (group === "score") {
+    if (value === "all") {
+      state.filters.scores.clear();
+      document.querySelectorAll('.filter-btn[data-filter-group="score"]').forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    } else {
+      const allBtn = document.querySelector('.filter-btn[data-filter-group="score"][data-value="all"]');
+      if (state.filters.scores.has(value)) {
+        state.filters.scores.delete(value);
+        btn.classList.remove("active");
+      } else {
+        state.filters.scores.add(value);
+        btn.classList.add("active");
+      }
+      if (allBtn) {
+        if (state.filters.scores.size === 0) allBtn.classList.add("active");
+        else allBtn.classList.remove("active");
+      }
+    }
+  } else if (group === "search") {
+    activateSearchPresetFilter(value);
+  } else {
+    activateSingleSelectFilter(group, value, btn);
+  }
+
+  refreshUI();
+}
+
+function bindFilterButtons() {
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    if (btn.getAttribute("data-filter-bound") === "1") return;
+    btn.setAttribute("data-filter-bound", "1");
+    btn.addEventListener("click", () => handleFilterButtonClick(btn));
+  });
+}
+
 function splitChunks(values, size) {
   const out = [];
   for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size));
@@ -2283,20 +2569,20 @@ function bindUi() {
     refreshUI();
   });
 
-  document.getElementById("startDate").addEventListener("change", (e) => {
+  document.getElementById("startDate").addEventListener("change", async (e) => {
     clearDateRangeQuickSelection();
     state.filters.startDate = normalize(e.target.value);
-    refreshUI();
+    await ensureRowsForCurrentDateRange();
   });
 
-  document.getElementById("endDate").addEventListener("change", (e) => {
+  document.getElementById("endDate").addEventListener("change", async (e) => {
     clearDateRangeQuickSelection();
     state.filters.endDate = normalize(e.target.value);
-    refreshUI();
+    await ensureRowsForCurrentDateRange();
   });
 
   document.querySelectorAll(".date-range-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       if (btn.getAttribute("data-yesterday") === "true") {
         const yesterday = new Date();
         yesterday.setHours(0, 0, 0, 0);
@@ -2312,44 +2598,11 @@ function bindUi() {
       }
       clearDateRangeQuickSelection();
       btn.classList.add("active");
-      refreshUI();
+      await ensureRowsForCurrentDateRange();
     });
   });
 
-  document.querySelectorAll(".filter-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const group = btn.getAttribute("data-filter-group");
-      const value = btn.getAttribute("data-value") || "all";
-      if (!group) return;
-
-      if (group === "score") {
-        if (value === "all") {
-          state.filters.scores.clear();
-          document.querySelectorAll('.filter-btn[data-filter-group="score"]').forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-        } else {
-          const allBtn = document.querySelector('.filter-btn[data-filter-group="score"][data-value="all"]');
-          if (state.filters.scores.has(value)) {
-            state.filters.scores.delete(value);
-            btn.classList.remove("active");
-          } else {
-            state.filters.scores.add(value);
-            btn.classList.add("active");
-          }
-          if (allBtn) {
-            if (state.filters.scores.size === 0) allBtn.classList.add("active");
-            else allBtn.classList.remove("active");
-          }
-        }
-      } else if (group === "search") {
-        activateSearchPresetFilter(value);
-      } else {
-        activateSingleSelectFilter(group, value, btn);
-      }
-
-      refreshUI();
-    });
-  });
+  bindFilterButtons();
 
   document.getElementById("verifiedFilterBtn").addEventListener("click", (e) => {
     state.filters.onlyVerified = !state.filters.onlyVerified;
@@ -2554,48 +2807,33 @@ function initializeDateInputs() {
 
   state.filters.startDate = today;
   state.filters.endDate = today;
+
+  clearDateRangeQuickSelection();
+  const todayBtn = document.querySelector('.date-range-btn[data-days="1"]');
+  if (todayBtn) todayBtn.classList.add("active");
 }
 
-async function loadWorkbook() {
+async function loadJsonData() {
   const status = document.getElementById("loadStatus");
   const warningsEl = document.getElementById("loadWarnings");
 
   try {
-    if (!window.XLSX) throw new Error("SheetJS library not loaded.");
-    const tedResponse = await fetch(DATA_URL, { cache: "no-cache" });
-    if (!tedResponse.ok) throw new Error(`Could not fetch ${DATA_URL}. HTTP ${tedResponse.status}`);
-    const usaResponse = await fetch(USA_DATA_URL, { cache: "no-cache" });
-
-    const tedBuffer = await tedResponse.arrayBuffer();
-    const workbook = XLSX.read(tedBuffer, { type: "array", cellDates: true });
-    const usaWorkbook = usaResponse.ok
-      ? XLSX.read(await usaResponse.arrayBuffer(), { type: "array", cellDates: true })
-      : null;
-
     const warnings = [];
-    const newRows = parseSheetRows(workbook, NEW_SHEET, "new_competition", "ted");
-    const resultRows = parseSheetRows(workbook, RESULTS_SHEET, "results", "ted");
-    const usaRows = usaWorkbook ? parseSheetRows(usaWorkbook, USA_SHEET, "new_competition", "usa") : [];
-
-    if (!workbook.SheetNames.includes(NEW_SHEET)) warnings.push(`Worksheet '${NEW_SHEET}' was not found.`);
-    if (!workbook.SheetNames.includes(RESULTS_SHEET)) warnings.push(`Worksheet '${RESULTS_SHEET}' was not found.`);
-    if (!usaResponse.ok) warnings.push(`USA workbook could not be loaded (${USA_DATA_URL}, HTTP ${usaResponse.status}).`);
-    if (usaWorkbook && !usaWorkbook.SheetNames.includes(USA_SHEET)) warnings.push(`Worksheet '${USA_SHEET}' was not found in USA workbook.`);
-
-    state.rows = [...newRows, ...resultRows, ...usaRows];
-    state.rows.forEach((row) => enrichRow(row));
-
-    addDynamicFilterButtons();
-    bindUi();
     initializeDateInputs();
-    refreshUI();
+    if (!state.data.hasBoundUi) {
+      bindUi();
+      state.data.hasBoundUi = true;
+    }
+    await loadManifest(warnings);
+    applyLatestAvailableDateIfTodayIsEmpty();
+    await ensureRowsForCurrentDateRange({ warnings, loadRemote: false });
 
-    status.textContent = `Workbook loaded: ${state.rows.length} rows from TED ('${NEW_SHEET}' + '${RESULTS_SHEET}') and USA ('${USA_SHEET}').`;
+    status.textContent = `JSON loaded: ${state.rows.length} rows for the selected date range.`;
     warningsEl.innerHTML = warnings.map((w) => `<div>${esc(w)}</div>`).join("");
   } catch (err) {
-    status.textContent = "Workbook load failed.";
+    status.textContent = "JSON load failed.";
     warningsEl.textContent = String(err && err.message ? err.message : err);
-    document.getElementById("cardsPool").innerHTML = "<p>Data could not be loaded. Check Excel path.</p>";
+    document.getElementById("cardsPool").innerHTML = "<p>Data could not be loaded. Check JSON output indexes.</p>";
   }
 }
 
@@ -2737,7 +2975,7 @@ async function initAuthFlow() {
 
 async function bootstrap() {
   applyDashboardGate();
-  await loadWorkbook();
+  await loadJsonData();
   await initAuthFlow();
 }
 

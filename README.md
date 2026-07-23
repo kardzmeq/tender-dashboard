@@ -1,23 +1,27 @@
-﻿Author: kard
+Author: kard
 
-# TED Overview Hub (GitHub Pages)
+# TED Overview Hub
 
-This folder is a static web app for GitHub Pages.
+This folder is a static dashboard for the JSON acquisition output.
 
-## Required file
+## Required Data
 
-Place your workbook here:
+Place or copy the generated JSON output folder here:
 
-- `data/ted_results.xlsx`
+- `JSON_Output/_manifest.json`
+- `JSON_Output/Agent_2/_indexes/<yyMMdd>.json`
+- `JSON_Output/Agent_2_Results/_indexes/<yyMMdd>.json`
+- `JSON_Output/IMS_USA/_indexes/<yyMMdd>.json`
 
-The app reads these sheets from that file:
+The weekday runner copies the project-level `JSON_Output` folder into this
+dashboard folder before publishing.
 
-- `Agent_2`
-- `Agent_2_Results`
+The dashboard loads daily indexes on demand based on the selected date range.
+The legacy `_index.json` files are retained as a fallback.
 
-## Local test
+## Local Test
 
-From `overview_hub_web` run a simple static server (example):
+From this folder run a simple static server:
 
 ```powershell
 python -m http.server 8000
@@ -27,20 +31,13 @@ Then open:
 
 - `http://localhost:8000`
 
-## Publish on GitHub Pages
+## Publishing
 
-1. Commit and push `overview_hub_web/` including `data/ted_results.xlsx`.
-2. In GitHub repo settings, enable **Pages**.
-3. Choose branch/folder that contains this app (for example `main` + `/260204_Aquise_Python/overview_hub_web`).
-4. Wait for deployment and open the Pages URL.
+1. Run the JSON scraper pipeline.
+2. Copy or commit `JSON_Output/` with this dashboard.
+3. GitHub Pages redeploys automatically after push.
 
-## Updating data and redeploying
-
-1. Replace `data/ted_results.xlsx` with the newest export.
-2. Commit and push.
-3. GitHub Pages redeploys automatically.
-
-## Supabase setup (comments + login + score overrides)
+## Supabase Setup
 
 1. Create a Supabase project.
 2. In Supabase SQL Editor run:
@@ -51,6 +48,5 @@ Then open:
    - `url`
    - `anonKey`
 
-Notes:
-- Without `supabase-config.js` values, the dashboard still loads Excel data, but auth/comment/override features stay disabled.
-- Override history is append-only. The newest override entry per tender is used as active score.
+Without Supabase config, the dashboard still loads JSON data, but auth,
+comments, verification, and overrides stay disabled.

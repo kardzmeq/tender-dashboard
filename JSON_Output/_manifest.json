@@ -1,0 +1,935 @@
+{
+  "generated_at": "2026-07-23T10:04:01",
+  "index_type": "daily_manifest",
+  "dates": [
+    "260319",
+    "260320",
+    "260323",
+    "260324",
+    "260325",
+    "260326",
+    "260327",
+    "260330",
+    "260331",
+    "260401",
+    "260402",
+    "260403",
+    "260407",
+    "260408",
+    "260409",
+    "260410",
+    "260413",
+    "260414",
+    "260415",
+    "260416",
+    "260417",
+    "260420",
+    "260421",
+    "260422",
+    "260423",
+    "260424",
+    "260427",
+    "260428",
+    "260430",
+    "260504",
+    "260505",
+    "260506",
+    "260507",
+    "260508",
+    "260511",
+    "260512",
+    "260513",
+    "260515",
+    "260518",
+    "260519",
+    "260520",
+    "260521",
+    "260522",
+    "260526",
+    "260527",
+    "260528",
+    "260529",
+    "260601",
+    "260602",
+    "260603",
+    "260604",
+    "260605",
+    "260608",
+    "260609",
+    "260610",
+    "260611",
+    "260612",
+    "260615",
+    "260616",
+    "260617",
+    "260618",
+    "260619",
+    "260622",
+    "260623",
+    "260624",
+    "260625",
+    "260626",
+    "260629",
+    "260630",
+    "260701",
+    "260702",
+    "260703",
+    "260706",
+    "260707",
+    "260708",
+    "260709",
+    "260710",
+    "260713",
+    "260714",
+    "260715",
+    "260716",
+    "260717",
+    "260720",
+    "260721",
+    "260722"
+  ],
+  "folders": {
+    "Agent_2": {
+      "260319": {
+        "count": 1,
+        "index": "Agent_2/_indexes/260319.json"
+      },
+      "260320": {
+        "count": 52,
+        "index": "Agent_2/_indexes/260320.json"
+      },
+      "260323": {
+        "count": 65,
+        "index": "Agent_2/_indexes/260323.json"
+      },
+      "260324": {
+        "count": 52,
+        "index": "Agent_2/_indexes/260324.json"
+      },
+      "260325": {
+        "count": 64,
+        "index": "Agent_2/_indexes/260325.json"
+      },
+      "260326": {
+        "count": 61,
+        "index": "Agent_2/_indexes/260326.json"
+      },
+      "260327": {
+        "count": 72,
+        "index": "Agent_2/_indexes/260327.json"
+      },
+      "260330": {
+        "count": 107,
+        "index": "Agent_2/_indexes/260330.json"
+      },
+      "260331": {
+        "count": 52,
+        "index": "Agent_2/_indexes/260331.json"
+      },
+      "260401": {
+        "count": 65,
+        "index": "Agent_2/_indexes/260401.json"
+      },
+      "260402": {
+        "count": 71,
+        "index": "Agent_2/_indexes/260402.json"
+      },
+      "260403": {
+        "count": 71,
+        "index": "Agent_2/_indexes/260403.json"
+      },
+      "260407": {
+        "count": 38,
+        "index": "Agent_2/_indexes/260407.json"
+      },
+      "260408": {
+        "count": 41,
+        "index": "Agent_2/_indexes/260408.json"
+      },
+      "260409": {
+        "count": 50,
+        "index": "Agent_2/_indexes/260409.json"
+      },
+      "260410": {
+        "count": 54,
+        "index": "Agent_2/_indexes/260410.json"
+      },
+      "260413": {
+        "count": 56,
+        "index": "Agent_2/_indexes/260413.json"
+      },
+      "260414": {
+        "count": 43,
+        "index": "Agent_2/_indexes/260414.json"
+      },
+      "260415": {
+        "count": 67,
+        "index": "Agent_2/_indexes/260415.json"
+      },
+      "260416": {
+        "count": 70,
+        "index": "Agent_2/_indexes/260416.json"
+      },
+      "260417": {
+        "count": 55,
+        "index": "Agent_2/_indexes/260417.json"
+      },
+      "260420": {
+        "count": 77,
+        "index": "Agent_2/_indexes/260420.json"
+      },
+      "260421": {
+        "count": 55,
+        "index": "Agent_2/_indexes/260421.json"
+      },
+      "260422": {
+        "count": 51,
+        "index": "Agent_2/_indexes/260422.json"
+      },
+      "260423": {
+        "count": 62,
+        "index": "Agent_2/_indexes/260423.json"
+      },
+      "260424": {
+        "count": 64,
+        "index": "Agent_2/_indexes/260424.json"
+      },
+      "260427": {
+        "count": 78,
+        "index": "Agent_2/_indexes/260427.json"
+      },
+      "260428": {
+        "count": 50,
+        "index": "Agent_2/_indexes/260428.json"
+      },
+      "260430": {
+        "count": 68,
+        "index": "Agent_2/_indexes/260430.json"
+      },
+      "260504": {
+        "count": 89,
+        "index": "Agent_2/_indexes/260504.json"
+      },
+      "260505": {
+        "count": 70,
+        "index": "Agent_2/_indexes/260505.json"
+      },
+      "260506": {
+        "count": 50,
+        "index": "Agent_2/_indexes/260506.json"
+      },
+      "260507": {
+        "count": 49,
+        "index": "Agent_2/_indexes/260507.json"
+      },
+      "260508": {
+        "count": 53,
+        "index": "Agent_2/_indexes/260508.json"
+      },
+      "260511": {
+        "count": 105,
+        "index": "Agent_2/_indexes/260511.json"
+      },
+      "260512": {
+        "count": 55,
+        "index": "Agent_2/_indexes/260512.json"
+      },
+      "260513": {
+        "count": 50,
+        "index": "Agent_2/_indexes/260513.json"
+      },
+      "260515": {
+        "count": 54,
+        "index": "Agent_2/_indexes/260515.json"
+      },
+      "260518": {
+        "count": 80,
+        "index": "Agent_2/_indexes/260518.json"
+      },
+      "260519": {
+        "count": 43,
+        "index": "Agent_2/_indexes/260519.json"
+      },
+      "260520": {
+        "count": 49,
+        "index": "Agent_2/_indexes/260520.json"
+      },
+      "260521": {
+        "count": 65,
+        "index": "Agent_2/_indexes/260521.json"
+      },
+      "260522": {
+        "count": 59,
+        "index": "Agent_2/_indexes/260522.json"
+      },
+      "260526": {
+        "count": 57,
+        "index": "Agent_2/_indexes/260526.json"
+      },
+      "260527": {
+        "count": 73,
+        "index": "Agent_2/_indexes/260527.json"
+      },
+      "260528": {
+        "count": 51,
+        "index": "Agent_2/_indexes/260528.json"
+      },
+      "260529": {
+        "count": 65,
+        "index": "Agent_2/_indexes/260529.json"
+      },
+      "260601": {
+        "count": 72,
+        "index": "Agent_2/_indexes/260601.json"
+      },
+      "260602": {
+        "count": 48,
+        "index": "Agent_2/_indexes/260602.json"
+      },
+      "260603": {
+        "count": 56,
+        "index": "Agent_2/_indexes/260603.json"
+      },
+      "260604": {
+        "count": 47,
+        "index": "Agent_2/_indexes/260604.json"
+      },
+      "260605": {
+        "count": 48,
+        "index": "Agent_2/_indexes/260605.json"
+      },
+      "260608": {
+        "count": 58,
+        "index": "Agent_2/_indexes/260608.json"
+      },
+      "260609": {
+        "count": 59,
+        "index": "Agent_2/_indexes/260609.json"
+      },
+      "260610": {
+        "count": 58,
+        "index": "Agent_2/_indexes/260610.json"
+      },
+      "260611": {
+        "count": 58,
+        "index": "Agent_2/_indexes/260611.json"
+      },
+      "260612": {
+        "count": 57,
+        "index": "Agent_2/_indexes/260612.json"
+      },
+      "260615": {
+        "count": 59,
+        "index": "Agent_2/_indexes/260615.json"
+      },
+      "260616": {
+        "count": 44,
+        "index": "Agent_2/_indexes/260616.json"
+      },
+      "260617": {
+        "count": 53,
+        "index": "Agent_2/_indexes/260617.json"
+      },
+      "260618": {
+        "count": 53,
+        "index": "Agent_2/_indexes/260618.json"
+      },
+      "260619": {
+        "count": 62,
+        "index": "Agent_2/_indexes/260619.json"
+      },
+      "260622": {
+        "count": 69,
+        "index": "Agent_2/_indexes/260622.json"
+      },
+      "260623": {
+        "count": 11,
+        "index": "Agent_2/_indexes/260623.json"
+      },
+      "260624": {
+        "count": 64,
+        "index": "Agent_2/_indexes/260624.json"
+      },
+      "260625": {
+        "count": 103,
+        "index": "Agent_2/_indexes/260625.json"
+      },
+      "260626": {
+        "count": 43,
+        "index": "Agent_2/_indexes/260626.json"
+      },
+      "260629": {
+        "count": 85,
+        "index": "Agent_2/_indexes/260629.json"
+      },
+      "260630": {
+        "count": 43,
+        "index": "Agent_2/_indexes/260630.json"
+      },
+      "260701": {
+        "count": 48,
+        "index": "Agent_2/_indexes/260701.json"
+      },
+      "260702": {
+        "count": 60,
+        "index": "Agent_2/_indexes/260702.json"
+      },
+      "260703": {
+        "count": 52,
+        "index": "Agent_2/_indexes/260703.json"
+      },
+      "260706": {
+        "count": 53,
+        "index": "Agent_2/_indexes/260706.json"
+      },
+      "260707": {
+        "count": 53,
+        "index": "Agent_2/_indexes/260707.json"
+      },
+      "260708": {
+        "count": 60,
+        "index": "Agent_2/_indexes/260708.json"
+      },
+      "260709": {
+        "count": 47,
+        "index": "Agent_2/_indexes/260709.json"
+      },
+      "260710": {
+        "count": 66,
+        "index": "Agent_2/_indexes/260710.json"
+      },
+      "260713": {
+        "count": 81,
+        "index": "Agent_2/_indexes/260713.json"
+      },
+      "260714": {
+        "count": 54,
+        "index": "Agent_2/_indexes/260714.json"
+      },
+      "260715": {
+        "count": 70,
+        "index": "Agent_2/_indexes/260715.json"
+      },
+      "260716": {
+        "count": 36,
+        "index": "Agent_2/_indexes/260716.json"
+      },
+      "260717": {
+        "count": 54,
+        "index": "Agent_2/_indexes/260717.json"
+      },
+      "260720": {
+        "count": 65,
+        "index": "Agent_2/_indexes/260720.json"
+      },
+      "260721": {
+        "count": 54,
+        "index": "Agent_2/_indexes/260721.json"
+      },
+      "260722": {
+        "count": 64,
+        "index": "Agent_2/_indexes/260722.json"
+      }
+    },
+    "Agent_2_Results": {
+      "260320": {
+        "count": 51,
+        "index": "Agent_2_Results/_indexes/260320.json"
+      },
+      "260323": {
+        "count": 48,
+        "index": "Agent_2_Results/_indexes/260323.json"
+      },
+      "260324": {
+        "count": 63,
+        "index": "Agent_2_Results/_indexes/260324.json"
+      },
+      "260325": {
+        "count": 62,
+        "index": "Agent_2_Results/_indexes/260325.json"
+      },
+      "260326": {
+        "count": 52,
+        "index": "Agent_2_Results/_indexes/260326.json"
+      },
+      "260327": {
+        "count": 81,
+        "index": "Agent_2_Results/_indexes/260327.json"
+      },
+      "260330": {
+        "count": 50,
+        "index": "Agent_2_Results/_indexes/260330.json"
+      },
+      "260331": {
+        "count": 48,
+        "index": "Agent_2_Results/_indexes/260331.json"
+      },
+      "260401": {
+        "count": 46,
+        "index": "Agent_2_Results/_indexes/260401.json"
+      },
+      "260402": {
+        "count": 47,
+        "index": "Agent_2_Results/_indexes/260402.json"
+      },
+      "260403": {
+        "count": 32,
+        "index": "Agent_2_Results/_indexes/260403.json"
+      },
+      "260407": {
+        "count": 20,
+        "index": "Agent_2_Results/_indexes/260407.json"
+      },
+      "260408": {
+        "count": 40,
+        "index": "Agent_2_Results/_indexes/260408.json"
+      },
+      "260409": {
+        "count": 52,
+        "index": "Agent_2_Results/_indexes/260409.json"
+      },
+      "260410": {
+        "count": 53,
+        "index": "Agent_2_Results/_indexes/260410.json"
+      },
+      "260413": {
+        "count": 45,
+        "index": "Agent_2_Results/_indexes/260413.json"
+      },
+      "260414": {
+        "count": 38,
+        "index": "Agent_2_Results/_indexes/260414.json"
+      },
+      "260415": {
+        "count": 58,
+        "index": "Agent_2_Results/_indexes/260415.json"
+      },
+      "260416": {
+        "count": 71,
+        "index": "Agent_2_Results/_indexes/260416.json"
+      },
+      "260417": {
+        "count": 68,
+        "index": "Agent_2_Results/_indexes/260417.json"
+      },
+      "260420": {
+        "count": 41,
+        "index": "Agent_2_Results/_indexes/260420.json"
+      },
+      "260421": {
+        "count": 45,
+        "index": "Agent_2_Results/_indexes/260421.json"
+      },
+      "260422": {
+        "count": 53,
+        "index": "Agent_2_Results/_indexes/260422.json"
+      },
+      "260423": {
+        "count": 66,
+        "index": "Agent_2_Results/_indexes/260423.json"
+      },
+      "260424": {
+        "count": 59,
+        "index": "Agent_2_Results/_indexes/260424.json"
+      },
+      "260427": {
+        "count": 52,
+        "index": "Agent_2_Results/_indexes/260427.json"
+      },
+      "260428": {
+        "count": 47,
+        "index": "Agent_2_Results/_indexes/260428.json"
+      },
+      "260430": {
+        "count": 82,
+        "index": "Agent_2_Results/_indexes/260430.json"
+      },
+      "260504": {
+        "count": 59,
+        "index": "Agent_2_Results/_indexes/260504.json"
+      },
+      "260505": {
+        "count": 61,
+        "index": "Agent_2_Results/_indexes/260505.json"
+      },
+      "260506": {
+        "count": 78,
+        "index": "Agent_2_Results/_indexes/260506.json"
+      },
+      "260507": {
+        "count": 55,
+        "index": "Agent_2_Results/_indexes/260507.json"
+      },
+      "260508": {
+        "count": 60,
+        "index": "Agent_2_Results/_indexes/260508.json"
+      },
+      "260511": {
+        "count": 55,
+        "index": "Agent_2_Results/_indexes/260511.json"
+      },
+      "260512": {
+        "count": 60,
+        "index": "Agent_2_Results/_indexes/260512.json"
+      },
+      "260513": {
+        "count": 64,
+        "index": "Agent_2_Results/_indexes/260513.json"
+      },
+      "260515": {
+        "count": 43,
+        "index": "Agent_2_Results/_indexes/260515.json"
+      },
+      "260518": {
+        "count": 93,
+        "index": "Agent_2_Results/_indexes/260518.json"
+      },
+      "260519": {
+        "count": 82,
+        "index": "Agent_2_Results/_indexes/260519.json"
+      },
+      "260520": {
+        "count": 54,
+        "index": "Agent_2_Results/_indexes/260520.json"
+      },
+      "260521": {
+        "count": 50,
+        "index": "Agent_2_Results/_indexes/260521.json"
+      },
+      "260522": {
+        "count": 29,
+        "index": "Agent_2_Results/_indexes/260522.json"
+      },
+      "260526": {
+        "count": 48,
+        "index": "Agent_2_Results/_indexes/260526.json"
+      },
+      "260527": {
+        "count": 59,
+        "index": "Agent_2_Results/_indexes/260527.json"
+      },
+      "260528": {
+        "count": 64,
+        "index": "Agent_2_Results/_indexes/260528.json"
+      },
+      "260529": {
+        "count": 56,
+        "index": "Agent_2_Results/_indexes/260529.json"
+      },
+      "260601": {
+        "count": 53,
+        "index": "Agent_2_Results/_indexes/260601.json"
+      },
+      "260602": {
+        "count": 57,
+        "index": "Agent_2_Results/_indexes/260602.json"
+      },
+      "260603": {
+        "count": 52,
+        "index": "Agent_2_Results/_indexes/260603.json"
+      },
+      "260604": {
+        "count": 52,
+        "index": "Agent_2_Results/_indexes/260604.json"
+      },
+      "260605": {
+        "count": 39,
+        "index": "Agent_2_Results/_indexes/260605.json"
+      },
+      "260608": {
+        "count": 36,
+        "index": "Agent_2_Results/_indexes/260608.json"
+      },
+      "260609": {
+        "count": 54,
+        "index": "Agent_2_Results/_indexes/260609.json"
+      },
+      "260610": {
+        "count": 58,
+        "index": "Agent_2_Results/_indexes/260610.json"
+      },
+      "260611": {
+        "count": 45,
+        "index": "Agent_2_Results/_indexes/260611.json"
+      },
+      "260612": {
+        "count": 44,
+        "index": "Agent_2_Results/_indexes/260612.json"
+      },
+      "260615": {
+        "count": 50,
+        "index": "Agent_2_Results/_indexes/260615.json"
+      },
+      "260616": {
+        "count": 59,
+        "index": "Agent_2_Results/_indexes/260616.json"
+      },
+      "260617": {
+        "count": 58,
+        "index": "Agent_2_Results/_indexes/260617.json"
+      },
+      "260618": {
+        "count": 59,
+        "index": "Agent_2_Results/_indexes/260618.json"
+      },
+      "260619": {
+        "count": 58,
+        "index": "Agent_2_Results/_indexes/260619.json"
+      },
+      "260622": {
+        "count": 44,
+        "index": "Agent_2_Results/_indexes/260622.json"
+      },
+      "260623": {
+        "count": 11,
+        "index": "Agent_2_Results/_indexes/260623.json"
+      },
+      "260624": {
+        "count": 40,
+        "index": "Agent_2_Results/_indexes/260624.json"
+      },
+      "260625": {
+        "count": 94,
+        "index": "Agent_2_Results/_indexes/260625.json"
+      },
+      "260626": {
+        "count": 43,
+        "index": "Agent_2_Results/_indexes/260626.json"
+      },
+      "260629": {
+        "count": 51,
+        "index": "Agent_2_Results/_indexes/260629.json"
+      },
+      "260630": {
+        "count": 37,
+        "index": "Agent_2_Results/_indexes/260630.json"
+      },
+      "260701": {
+        "count": 45,
+        "index": "Agent_2_Results/_indexes/260701.json"
+      },
+      "260702": {
+        "count": 41,
+        "index": "Agent_2_Results/_indexes/260702.json"
+      },
+      "260703": {
+        "count": 56,
+        "index": "Agent_2_Results/_indexes/260703.json"
+      },
+      "260706": {
+        "count": 51,
+        "index": "Agent_2_Results/_indexes/260706.json"
+      },
+      "260707": {
+        "count": 35,
+        "index": "Agent_2_Results/_indexes/260707.json"
+      },
+      "260708": {
+        "count": 50,
+        "index": "Agent_2_Results/_indexes/260708.json"
+      },
+      "260709": {
+        "count": 46,
+        "index": "Agent_2_Results/_indexes/260709.json"
+      },
+      "260710": {
+        "count": 56,
+        "index": "Agent_2_Results/_indexes/260710.json"
+      },
+      "260713": {
+        "count": 82,
+        "index": "Agent_2_Results/_indexes/260713.json"
+      },
+      "260714": {
+        "count": 42,
+        "index": "Agent_2_Results/_indexes/260714.json"
+      },
+      "260715": {
+        "count": 56,
+        "index": "Agent_2_Results/_indexes/260715.json"
+      },
+      "260716": {
+        "count": 44,
+        "index": "Agent_2_Results/_indexes/260716.json"
+      },
+      "260717": {
+        "count": 46,
+        "index": "Agent_2_Results/_indexes/260717.json"
+      },
+      "260720": {
+        "count": 50,
+        "index": "Agent_2_Results/_indexes/260720.json"
+      },
+      "260721": {
+        "count": 41,
+        "index": "Agent_2_Results/_indexes/260721.json"
+      },
+      "260722": {
+        "count": 63,
+        "index": "Agent_2_Results/_indexes/260722.json"
+      }
+    },
+    "IMS_USA": {
+      "260507": {
+        "count": 95,
+        "index": "IMS_USA/_indexes/260507.json"
+      },
+      "260508": {
+        "count": 180,
+        "index": "IMS_USA/_indexes/260508.json"
+      },
+      "260511": {
+        "count": 115,
+        "index": "IMS_USA/_indexes/260511.json"
+      },
+      "260512": {
+        "count": 74,
+        "index": "IMS_USA/_indexes/260512.json"
+      },
+      "260513": {
+        "count": 71,
+        "index": "IMS_USA/_indexes/260513.json"
+      },
+      "260519": {
+        "count": 327,
+        "index": "IMS_USA/_indexes/260519.json"
+      },
+      "260520": {
+        "count": 76,
+        "index": "IMS_USA/_indexes/260520.json"
+      },
+      "260522": {
+        "count": 155,
+        "index": "IMS_USA/_indexes/260522.json"
+      },
+      "260526": {
+        "count": 135,
+        "index": "IMS_USA/_indexes/260526.json"
+      },
+      "260527": {
+        "count": 95,
+        "index": "IMS_USA/_indexes/260527.json"
+      },
+      "260528": {
+        "count": 63,
+        "index": "IMS_USA/_indexes/260528.json"
+      },
+      "260602": {
+        "count": 198,
+        "index": "IMS_USA/_indexes/260602.json"
+      },
+      "260605": {
+        "count": 63,
+        "index": "IMS_USA/_indexes/260605.json"
+      },
+      "260609": {
+        "count": 268,
+        "index": "IMS_USA/_indexes/260609.json"
+      },
+      "260616": {
+        "count": 410,
+        "index": "IMS_USA/_indexes/260616.json"
+      },
+      "260617": {
+        "count": 62,
+        "index": "IMS_USA/_indexes/260617.json"
+      },
+      "260619": {
+        "count": 164,
+        "index": "IMS_USA/_indexes/260619.json"
+      },
+      "260622": {
+        "count": 84,
+        "index": "IMS_USA/_indexes/260622.json"
+      },
+      "260623": {
+        "count": 83,
+        "index": "IMS_USA/_indexes/260623.json"
+      },
+      "260624": {
+        "count": 86,
+        "index": "IMS_USA/_indexes/260624.json"
+      },
+      "260625": {
+        "count": 77,
+        "index": "IMS_USA/_indexes/260625.json"
+      },
+      "260626": {
+        "count": 80,
+        "index": "IMS_USA/_indexes/260626.json"
+      },
+      "260629": {
+        "count": 106,
+        "index": "IMS_USA/_indexes/260629.json"
+      },
+      "260630": {
+        "count": 80,
+        "index": "IMS_USA/_indexes/260630.json"
+      },
+      "260701": {
+        "count": 82,
+        "index": "IMS_USA/_indexes/260701.json"
+      },
+      "260702": {
+        "count": 82,
+        "index": "IMS_USA/_indexes/260702.json"
+      },
+      "260703": {
+        "count": 49,
+        "index": "IMS_USA/_indexes/260703.json"
+      },
+      "260706": {
+        "count": 58,
+        "index": "IMS_USA/_indexes/260706.json"
+      },
+      "260707": {
+        "count": 74,
+        "index": "IMS_USA/_indexes/260707.json"
+      },
+      "260708": {
+        "count": 58,
+        "index": "IMS_USA/_indexes/260708.json"
+      },
+      "260709": {
+        "count": 60,
+        "index": "IMS_USA/_indexes/260709.json"
+      },
+      "260710": {
+        "count": 76,
+        "index": "IMS_USA/_indexes/260710.json"
+      },
+      "260713": {
+        "count": 106,
+        "index": "IMS_USA/_indexes/260713.json"
+      },
+      "260714": {
+        "count": 71,
+        "index": "IMS_USA/_indexes/260714.json"
+      },
+      "260715": {
+        "count": 61,
+        "index": "IMS_USA/_indexes/260715.json"
+      },
+      "260716": {
+        "count": 68,
+        "index": "IMS_USA/_indexes/260716.json"
+      },
+      "260717": {
+        "count": 93,
+        "index": "IMS_USA/_indexes/260717.json"
+      },
+      "260720": {
+        "count": 117,
+        "index": "IMS_USA/_indexes/260720.json"
+      },
+      "260721": {
+        "count": 93,
+        "index": "IMS_USA/_indexes/260721.json"
+      },
+      "260722": {
+        "count": 84,
+        "index": "IMS_USA/_indexes/260722.json"
+      }
+    }
+  }
+}
