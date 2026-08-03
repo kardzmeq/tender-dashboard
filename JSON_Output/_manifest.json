@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-03T14:19:06",
+  "generated_at": "2026-08-03T20:41:10",
   "index_type": "daily_manifest",
   "dates": [
     "260319",
@@ -179,7 +179,7 @@
         "index": "Agent_1/_indexes/260731.json"
       },
       "260803": {
-        "count": 527,
+        "count": 1305,
         "index": "Agent_1/_indexes/260803.json"
       }
     },
@@ -551,6 +551,10 @@
       "260731": {
         "count": 45,
         "index": "Agent_2/_indexes/260731.json"
+      },
+      "260803": {
+        "count": 55,
+        "index": "Agent_2/_indexes/260803.json"
       }
     },
     "Agent_2_Results": {
