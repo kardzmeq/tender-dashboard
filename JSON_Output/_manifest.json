@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-12T14:18:12",
+  "generated_at": "2026-08-12T22:50:43",
   "index_type": "daily_manifest",
   "dates": [
     "260319",
@@ -614,6 +614,10 @@
       "260811": {
         "count": 33,
         "index": "Agent_2/_indexes/260811.json"
+      },
+      "260812": {
+        "count": 44,
+        "index": "Agent_2/_indexes/260812.json"
       }
     },
     "Agent_2_Results": {
