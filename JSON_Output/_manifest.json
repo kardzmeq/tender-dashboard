@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-12T22:50:43",
+  "generated_at": "2026-08-13T03:37:32",
   "index_type": "daily_manifest",
   "dates": [
     "260319",
@@ -101,7 +101,8 @@
     "260807",
     "260810",
     "260811",
-    "260812"
+    "260812",
+    "260813"
   ],
   "folders": {
     "Agent_1": {
@@ -216,6 +217,10 @@
       "260812": {
         "count": 1163,
         "index": "Agent_1/_indexes/260812.json"
+      },
+      "260813": {
+        "count": 1211,
+        "index": "Agent_1/_indexes/260813.json"
       }
     },
     "Agent_2": {
@@ -618,6 +623,10 @@
       "260812": {
         "count": 44,
         "index": "Agent_2/_indexes/260812.json"
+      },
+      "260813": {
+        "count": 39,
+        "index": "Agent_2/_indexes/260813.json"
       }
     },
     "Agent_2_Results": {
@@ -1012,6 +1021,10 @@
       "260812": {
         "count": 42,
         "index": "Agent_2_Results/_indexes/260812.json"
+      },
+      "260813": {
+        "count": 65,
+        "index": "Agent_2_Results/_indexes/260813.json"
       }
     },
     "IMS_USA": {
