@@ -778,10 +778,6 @@ function fieldLocation(row) {
   return pickField(row, ["projektlage", "project_location", "location"]);
 }
 
-function fieldGoogleMapsSearch(row) {
-  return pickField(row, ["google_maps_suchbegriff"]);
-}
-
 function fieldServices(row) {
   return pickField(row, ["leistungen", "services"]);
 }
@@ -820,10 +816,6 @@ function fieldCost(row) {
 
 function fieldCostExplanation(row) {
   return pickField(row, ["baukosten_erklaerung", "construction_cost_explanation"]);
-}
-
-function fieldWinnerBidValue(row) {
-  return pickField(row, ["auftragswert_gewinner"]);
 }
 
 function fieldFee(row) {
@@ -915,14 +907,11 @@ function renderNamedRows(fields) {
 function enrichRow(row) {
   const title = normalize(fieldTitle(row));
   const lage = normalize(fieldLocation(row));
-  const mapsSearch = normalize(fieldGoogleMapsSearch(row));
   const category = normalize(row.category);
   const leistungen = normalize(fieldServices(row));
   const wettbewerb = normalize(row.wettbewerb_art);
-  const tragwerksplaner = normalize(row.wettbewerb_art_tragwerksplaner);
   const winner = normalize(row.gewinner);
   const winnerRole = normalize(row.gewinner_rolle);
-  const winnerBid = normalize(fieldWinnerBidValue(row));
 
   row._baseScore = parseRelevanzScore(fieldRelevanceScore(row));
   row._effectiveScore = row._baseScore;
@@ -932,7 +921,7 @@ function enrichRow(row) {
   row._category = category.toLowerCase();
   row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
   row._source = normalizeSourceType(row._source_type);
-  row._search = buildSearchIndex([title, lage, mapsSearch, category, leistungen, wettbewerb, tragwerksplaner, winner, winnerBid, winnerRole, row._source]);
+  row._search = buildSearchIndex([title, lage, category, leistungen, wettbewerb, winner, winnerRole, row._source]);
   row._dateObj = parseRowDate(fieldDate(row));
   row._deadlineObj = parseRowDate(fieldDeadline(row));
   row._costValue = parseCostSortable(fieldCost(row));
@@ -1026,9 +1015,7 @@ function getCardLabels(isUsa = false) {
       construction: "Construction costs",
       services: "Services",
       competitionType: "Competition type",
-      structuralEngineerSupport: "Competition / structural engineer",
       winner: "Winner",
-      winnerBidValue: "Winning bid value",
       winnerRole: "Winner role",
       winnerContact: "Winner contact",
       projectParticipants: "Project participants",
@@ -1057,9 +1044,7 @@ function getCardLabels(isUsa = false) {
       construction: "Baukosten",
       services: "Leistungen",
       competitionType: "Wettbewerbsart",
-      structuralEngineerSupport: "Verfahrensart / Tragwerksplaner",
       winner: "Gewinner",
-      winnerBidValue: "Auftragswert Gewinner",
       winnerRole: "Gewinner Rolle",
       winnerContact: "Gewinner Kontakt",
       projectParticipants: "Projektbeteiligte",
@@ -1100,7 +1085,6 @@ function getMoreInformationFields(view, sourceType, isUsa = false) {
       [labels.competitionType, normalize(view.wettbewerb_art) || "-"],
       [labels.winner, normalize(view.gewinner) || "-"],
       [labels.winnerRole, normalize(view.gewinner_rolle) || "-"],
-      [labels.winnerBidValue, normalize(fieldWinnerBidValue(view)) || "-"],
       [labels.winnerContact, normalize(view.gewinner_kontakt) || "-"],
       [labels.projectParticipants, normalize(view.projektbeteiligte) || "-"],
       [labels.nextSteps, normalize(view.naechste_schritte) || "-"],
@@ -1182,9 +1166,7 @@ function buildDraftHtml(project) {
   const shortDescription = fieldSummary(view) || "-";
   const services = fieldServices(view) || "-";
   const competitionType = pickField(view, ["wettbewerb_art"]) || "-";
-  const structuralEngineerSupport = pickField(view, ["wettbewerb_art_tragwerksplaner"]) || "-";
   const winner = pickField(view, ["gewinner"]) || "-";
-  const winnerBid = fieldWinnerBidValue(view) || "-";
   const winnerRole = pickField(view, ["gewinner_rolle"]) || "-";
   const awardCriteria = pickField(view, ["zuschlagskriterien", "award_criteria"]) || "-";
   const relevanceExplanation = fieldRelevanceExplanation(view) || "-";
@@ -1203,11 +1185,9 @@ function buildDraftHtml(project) {
 
   const summaryHtml = [
     renderDraftHtmlParagraph(labels.summary, shortDescription),
-    sourceType !== "results" && !isUsa ? renderDraftHtmlParagraph(labels.structuralEngineerSupport, structuralEngineerSupport) : "",
     renderDraftHtmlParagraph(sourceType === "results" ? labels.competitionType : labels.services, sourceType === "results" ? competitionType : services),
     sourceType === "results" ? renderDraftHtmlParagraph(labels.winner, winner) : "",
     sourceType === "results" ? renderDraftHtmlParagraph(labels.winnerRole, winnerRole) : "",
-    sourceType === "results" ? renderDraftHtmlParagraph(labels.winnerBidValue, winnerBid) : "",
     renderDraftHtmlParagraph(labels.relevance, relevanceExplanation),
     renderDraftHtmlParagraph(labels.construction, buildConstructionSummary(view, isUsa) || "-"),
     renderDraftHtmlParagraph(labels.awardCriteria, awardCriteria),
@@ -1274,10 +1254,8 @@ function buildDraftBody(project) {
   const shortDescription = fieldSummary(view);
   const services = fieldServices(view);
   const competitionType = pickField(view, ["wettbewerb_art"]);
-  const structuralEngineerSupport = pickField(view, ["wettbewerb_art_tragwerksplaner"]);
   const awardCriteria = pickField(view, ["zuschlagskriterien", "award_criteria"]);
   const winner = pickField(view, ["gewinner"]);
-  const winnerBid = fieldWinnerBidValue(view);
   const winnerRole = pickField(view, ["gewinner_rolle"]);
   const relevanceExplanation = fieldRelevanceExplanation(view);
   const [detailLink, secondaryLink] = buildNoticeLinks(view);
@@ -1309,11 +1287,9 @@ function buildDraftBody(project) {
 
   const summarySection = buildDraftSection(labels.summarySection, [
     buildDraftFieldLine(labels.summary, shortDescription, { fallback: "-" }),
-    sourceType !== "results" && !isUsa ? buildDraftFieldLine(labels.structuralEngineerSupport, structuralEngineerSupport, { fallback: "-" }) : "",
     buildDraftFieldLine(mainLabel, mainValue, { fallback: "-" }),
     sourceType === "results" ? buildDraftFieldLine(labels.winner, winner, { fallback: "-" }) : "",
     sourceType === "results" ? buildDraftFieldLine(labels.winnerRole, winnerRole, { fallback: "-" }) : "",
-    sourceType === "results" ? buildDraftFieldLine(labels.winnerBidValue, winnerBid, { fallback: "-" }) : "",
     buildDraftFieldLine(labels.relevance, relevanceExplanation, { fallback: "-" }),
     buildDraftFieldLine(labels.construction, buildConstructionSummary(view, isUsa), { fallback: "-" }),
     buildDraftFieldLine(labels.awardCriteria, awardCriteria, { fallback: "-" }),
@@ -1516,19 +1492,16 @@ function getEffectiveProjectData(project) {
 function rebuildDerivedFields(row, sourceData) {
   const title = normalize(fieldTitle(sourceData));
   const lage = normalize(fieldLocation(sourceData));
-  const mapsSearch = normalize(fieldGoogleMapsSearch(sourceData));
   const category = normalize(sourceData.category);
   const leistungen = normalize(fieldServices(sourceData));
   const wettbewerb = normalize(sourceData.wettbewerb_art);
-  const tragwerksplaner = normalize(sourceData.wettbewerb_art_tragwerksplaner);
   const winner = normalize(sourceData.gewinner);
   const winnerRole = normalize(sourceData.gewinner_rolle);
-  const winnerBid = normalize(fieldWinnerBidValue(sourceData));
 
   row._locationTags = buildLocationTags(lage);
   row._category = category.toLowerCase();
   row._categoryCanonical = canonicalCategoryLabel(category).toLowerCase();
-  row._search = buildSearchIndex([title, lage, mapsSearch, category, leistungen, wettbewerb, tragwerksplaner, winner, winnerBid, winnerRole, row._source]);
+  row._search = buildSearchIndex([title, lage, category, leistungen, wettbewerb, winner, winnerRole, row._source]);
   row._dateObj = parseRowDate(fieldDate(sourceData));
   row._deadlineObj = parseRowDate(fieldDeadline(sourceData));
   row._costValue = parseCostSortable(fieldCost(sourceData));
@@ -1942,8 +1915,7 @@ function renderCard(project) {
   const kurzbeschreibung = esc(normalize(fieldSummary(view)) || "-").replace(/\n/g, "<br>");
 
   const lageText = normalize(fieldLocation(view)) || "-";
-  const mapsQueryText = normalize(fieldGoogleMapsSearch(view)) || lageText;
-  const mapsLink = buildGoogleMapsLink(mapsQueryText);
+  const mapsLink = buildGoogleMapsLink(lageText);
   const lage = mapsLink
     ? `<a href="${esc(mapsLink)}" target="_blank" rel="noopener noreferrer">${esc(lageText)}</a>`
     : esc(lageText);
@@ -1951,10 +1923,8 @@ function renderCard(project) {
   const categoryValue = esc(normalize(view.category) || "-");
   const leistungen = esc(normalize(fieldServices(view)) || "-").replace(/\n/g, "<br>");
   const wettbewerbsart = esc(normalize(view.wettbewerb_art) || "-").replace(/\n/g, "<br>");
-  const tragwerksplanerInfo = esc(normalize(view.wettbewerb_art_tragwerksplaner) || "-").replace(/\n/g, "<br>");
   const zuschlagskriterien = esc(normalize(view.zuschlagskriterien) || "-").replace(/\n/g, "<br>");
   const gewinner = esc(normalize(view.gewinner) || "-").replace(/\n/g, "<br>");
-  const auftragswertGewinner = esc(normalize(fieldWinnerBidValue(view)) || "-").replace(/\n/g, "<br>");
   const gewinnerRolle = esc(normalize(view.gewinner_rolle) || "-").replace(/\n/g, "<br>");
   const erklaerung = esc(normalize(fieldRelevanceExplanation(view)) || "-").replace(/\n/g, "<br>");
   const constructionSummary = esc(buildConstructionSummary(view, isUsa)).replace(/\n/g, "<br>");
@@ -1976,11 +1946,9 @@ function renderCard(project) {
     : "";
   const requestBadgeHtml = hasOpenApprovalRequest(project._tenderKey) ? '<span class="status-badge request-open">AKQ Request Open</span>' : "";
   const editedBadgeHtml = hasFieldEdits(project._tenderKey) ? '<span class="status-badge edited">Fields Edited</span>' : "";
-  const labels = getCardLabels(isUsa);
 
   let mainLabel = isUsa ? "Services" : "Leistungen";
   let mainValue = leistungen;
-  let newCompetitionMainFields = "";
   let resultsMainFields = "";
 
   if (sourceType === "results") {
@@ -1989,14 +1957,10 @@ function renderCard(project) {
     resultsMainFields = `
       <p><strong>Gewinner:</strong><br>${gewinner}</p>
       <p><strong>Gewinner Rolle:</strong><br>${gewinnerRolle}</p>
-      <p><strong>${esc(labels.winnerBidValue)}:</strong><br>${auftragswertGewinner}</p>
-    `;
-  } else if (!isUsa) {
-    newCompetitionMainFields = `
-      <p><strong>${esc(labels.structuralEngineerSupport)}:</strong><br>${tragwerksplanerInfo}</p>
     `;
   }
 
+  const labels = getCardLabels(isUsa);
   const kostenTable = renderNamedRows(getCostEstimateFields(view, sourceType, isUsa));
   const weitereTable = renderNamedRows(getMoreInformationFields(view, sourceType, isUsa));
 
@@ -2031,7 +1995,6 @@ function renderCard(project) {
 
       <section class="always-visible">
         <p><strong>${esc(labels.summary)}:</strong><br>${kurzbeschreibung}</p>
-        ${newCompetitionMainFields}
         <p><strong>${esc(mainLabel)}:</strong><br>${mainValue}</p>
         ${resultsMainFields}
         <p><strong>${esc(labels.relevance)}:</strong><br>${erklaerung}</p>
