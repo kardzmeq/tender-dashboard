@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-20T03:28:12",
+  "generated_at": "2026-08-20T14:18:49",
   "index_type": "daily_manifest",
   "dates": [
     "260319",
@@ -1332,6 +1332,10 @@
       "260819": {
         "count": 69,
         "index": "IMS_USA/_indexes/260819.json"
+      },
+      "260820": {
+        "count": 93,
+        "index": "IMS_USA/_indexes/260820.json"
       }
     }
   }
